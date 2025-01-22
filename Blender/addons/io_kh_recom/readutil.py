@@ -6,13 +6,13 @@ class BinaryFileReader:
   def __init__(self, filepath):
     self.f = open(filepath, 'rb')
     self.filesize = os.path.getsize(filepath)
-    self.base_offset = 0
+    self.base_offset = 0 #Start of file
 
-  def seek(self, offs):
+  def seek(self, offs):#Goes to a specific part of the data based on the offset. Can go from anywhere
     self.f.seek(offs + self.base_offset)
 
   def tell(self):
-    return self.f.tell()
+    return self.f.tell() #Returns the current offset in the file
 
   def set_base_offset(self, offs):
     self.base_offset = offs
@@ -38,7 +38,7 @@ class BinaryFileReader:
   def read_nint32(self, n):
     return struct.unpack('<' + 'i' * n, self.f.read(n * 4))
 
-  def read_uint32(self):
+  def read_uint32(self): #Reads at the current offset for a int 32 and then moves 4 bytes
     return struct.unpack('<I', self.f.read(4))[0]
 
   def read_nuint32(self, n):
@@ -47,8 +47,9 @@ class BinaryFileReader:
   def read_float32(self):
     return struct.unpack('<f', self.f.read(4))[0]
 
-  def read_nfloat32(self, n):
+  def read_nfloat32(self, n): #Reads a number of floats from location
     return struct.unpack('<' + 'f' * n, self.f.read(n * 4))
+  
 
   # Reads max_len bytes and returns the first zero-terminated string.
   def read_string(self, max_len):
@@ -63,26 +64,31 @@ class BinaryFileReader:
 
 
 # Returns a list of tuples of the form (filename, byte_offs, byte_size).
-def read_rsrc_header(f):
+def read_rsrc_header(f):############################### Used for textures mostly
   files = []
 
   index = 0
   f.seek(0)
-  while True:
+  while True:#Breaks when it finds no more textures
     base_offs = index * 0x20
     f.seek(base_offs + 0x1C)
     byte_size = f.read_int32()
-    if not byte_size:
+    
+    if not byte_size:#Breaks
+      
       break
-    elif byte_size < 0:
+    elif byte_size < 0: #Seems to be for mdls
+      
       byte_size &= 0x7FFFFFFF
       f.seek(base_offs)
       byte_offs = f.read_uint32()
       filename = f.read_string(0x14)
     else:
+      
       f.seek(base_offs)
       filename = f.read_string(0x10)
       byte_offs = f.read_uint32()
+    
     files.append((filename, byte_offs, byte_size))
     index += 1
 

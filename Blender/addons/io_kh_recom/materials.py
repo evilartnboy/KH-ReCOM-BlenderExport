@@ -40,23 +40,23 @@ class MaterialManager:
     for filepath in filepaths:
       self._load_texture_archive(filepath)
 
-  def _load_texture_archive(self, filepath):
+  def _load_texture_archive(self, filepath): ##This def loads the textures from a rtm file
     f = readutil.BinaryFileReader(filepath)
     readutil.maybe_skip_ps4_header(f)
-
-    texture_files = readutil.read_rsrc_header(f)
+    
+    texture_files = readutil.read_rsrc_header(f)#Gets the texture names, byte offs, and byte_size from the rtm file
     for texture_name, byte_offs, byte_size in texture_files:
       if texture_name[-4:] == '.tm2':
         texture_name = texture_name[:-4]
       self._load_single_texture(f, texture_name, byte_offs, byte_size)
 
-  def _load_single_texture(self, f, texture_name, offs, size):
+  def _load_single_texture(self, f, texture_name, offs, size): #This is the def that actually does it
     if texture_name not in self._material_map:
       print(f'Texture is unused: {texture_name}')
       return
     if texture_name in self._processed_map:
       return
-
+    
     f.seek(offs)
     if f.read_uint32() != 0x324D4954:  # "TIM2"
       print(f'Not a TIM2 file: {texture_name}')
