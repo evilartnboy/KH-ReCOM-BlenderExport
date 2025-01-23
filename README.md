@@ -125,7 +125,7 @@ I am also going to separate keys head from the rest of his model since it has it
 ![10](https://github.com/user-attachments/assets/9fb4d923-4fcf-4961-8fac-5af4472c138a)
 
 Now that we have our characters in position we can begin combining them. You want to first select your new model and then the model you want to join it to
-and join them with cntl j.
+and join them with cntl j. Make sure not to delete the original mesh before joining.
 
 Then you go to the materials tab and vertex group tabs and remove any materials and vertex groups that dont belong to your KH model.
 
