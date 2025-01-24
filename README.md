@@ -143,7 +143,7 @@ Now we will go through our import model and assign each vertex to a vertex group
 
 After that we can begin removing the original kh mesh. Now each submodel needs at least 1 triangle in it for the game to work so for any models we did not add
 a mesh too we will select a triangle, hit y and move it inside our model, also change the bones of that triangle to be the same as the mesh around it so it 
-dosent come out.
+dosent come out. Edit: It seems like enemy models dont respond well to simple edits of vertex geometry, if you are just resizing something on a shadow or whatever split the mesh faces and edges by verts so the export thinks its a new mesh, NPC and player models seem to be fine with simple edits.
 ![13](https://github.com/user-attachments/assets/e1371b02-5cff-4ce0-8c68-2baa30f7ebb3)
 
 After that there is just one last thing we need to do before exporting. We must split each triangle in the mesh away from each other into individual triangles. This is because
