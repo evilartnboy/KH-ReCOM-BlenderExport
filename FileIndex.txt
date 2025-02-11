@@ -1,0 +1,753 @@
+Original-NPC MDLS
+0001 - Cutscene sora
+0002 - Cutscene riku
+0003 - Cutscene Donald
+0004 - cutscene goofy
+0005 - Cutscene jiminy
+0006 - Donald Unused in pc
+0007 - goofy Unused in pc
+0008 - Moogle
+0009 - Kairi
+0012 - Dark riku location unknown, possibly cutscene
+0013 - Pot Moogle
+0014 - Moogle card shop
+0015 - Pot
+0020 - Shadow Heartless
+0030 - Red card
+0031 - Blue card cloud
+0032 - Blue card empty
+0050 - Cutscene keyblade possibly unused
+0051 - High quality cutscene model unused in PC
+0053 - High quality Donald unused
+0101 - Sora location unknown
+0103 - Donald unknown
+0104 - Goofy unknown
+0105 - Aeirith
+0106 - CID
+0107 - leon
+0108 - Yuffie
+0109 - Hooded figure
+0110 - Guard armor
+0111 - Guard armor card
+0112 - Sora unknown
+0113 - Keyblade  unknown
+0114 - Pluto
+0115 - Donald Card
+0116 - Goofy card
+0201 - Sora unknown
+0203 - Donald unknown
+0204 - Goofy unknown
+0205 - Aladin
+0206 - Genie
+0207 - Genie legs
+0208 - Jasmine
+0209 - Iago
+0210 - Jafar
+0211 - Genie Jafar
+0212 - Lamp
+0213 - High quality genie
+0214 - Sora unknown
+0215 - Keyblade unknown
+0216 - Sora unknown
+0217 - Donald unknown
+0218 - Goofy unknown
+0219 - Aladin unknown
+0220 - Shadow heartless unknown
+0231 - Genie card
+0232 - Jafar card
+0250 - Keyblade unknown
+0301 - Sora unknown
+0303 - Donald unknown
+0304 - Goofy unknown
+0305 - Phil
+0306 - Hercules
+0307 - Hades blue and red
+0308 - Cloud
+0309 - Cloud card
+0310 - Heal card
+0311 - Hades card
+0405 - Alice
+0406 - Red Queen
+0407 - Black Card man
+0408 - Red card man
+0409 - Late Rabbit
+0410 - Chesiree cat
+0411 - Trick master
+0412 - Lock face
+0413 - Trumpet
+0414 - Req queen high quality
+0415 - Red card man card
+0416 - Trick master card
+0501 - Sora unknown
+0502 - Jimminy
+0503 - Donald unknown
+0504 - Goofy unknown
+0505 - Pinocchio 
+0506 - Geppedo 
+0507 - Parasite cage
+0508 - Parasite cage card
+0601 - Sora Halloween town
+0603 - Donald Halloween town
+0604 - Goofy Halloween town
+0605 - Jack
+0606 - Susie
+0607 - Professor
+0608 - Oggie Boogie
+0609 - High quality jack
+0610 - Oggie card
+0611 - Oggie arena spikes?
+0613 - Elixir of memories
+0614 - Halloween town shadow heartless
+0650 - Halloween town keyblade
+0705 - Ariel w trident
+0706 - Sebastian 
+0707 - Flounder
+0708 - Ursula 
+0709 - Ursula card
+0710 - Red fish
+0711 - Purple/Blue fish
+0801 - Sora unknown
+0803 - Donald unknown
+0804 - Goofy unknown
+0805 - Peter pan
+0806 - Tinker Bell
+0807 - Peter pan girl Penny?
+0808 - Hook
+0809 - A door wtf
+0810 - Another fucking door
+0811 - Moogle Unknown
+0831 - Tinker bell card
+0832 - Hook card
+0905 - Beast
+0906 - Belle
+0907 - Maleficent 
+0908 - Maleficent card
+0913 - Bookshelf
+0914 - Thinner bookshelf
+1001 - Sora unknown
+1002 - Sora unknown
+1005 - Pooh
+1006 - Tigger
+1007 - Piglet
+1008 - Eyor
+1009 - Rabbit 
+1010 - Owl
+1011 - Roo
+1012 - Bee hive
+1013 - Bees
+1014 - Some keyblade card
+1015 - Ether card
+1016 - Eyor tail
+1017 - Pumpkin 
+1020 - Balloons
+1021 - Vines
+1022 - Door
+1028 - Cabbages
+1029 - More cabbages
+1101 - Sora unknown
+1104 - Goofy unknown
+1105 - Namine
+1106 - Vexen card
+1107 - Namine charm
+1108 - Tram
+1201 - Sora unknown
+1202 - Riku unknown
+1205 - Kid tidus
+1206 - Waku
+1207 - Girl
+1208 - Kairi charm
+1209 - Darkside charm
+1210 - Darkside 
+1211 - Riku unknown
+1212 - Hollow bastion door
+1213 - Zexion card
+1303 - Donald standing npc
+1304 - Goofy standing npc
+1305 - Axel
+1306 - Mickey
+1315 - Zexion 
+1316 - DIZ
+1317 - White door
+1321 - Fire card
+1322 - Lightning card
+1323 - Axel card
+1324 - Marluxia card
+1325 - Ether card
+1326 - High potion card
+1327 - Aero card
+1328 - Riku card
+1329 - Larxene card
+1330 - Lexaeus card
+-----------------------Journal section?
+2001 - Sora journal
+2002 - Donald journal
+2003 - Goofy journal
+2004 - Jimminy journal
+2005 - Riku journal
+2006 - Kairi journal
+2007 - Namine journal
+2008 - Dark riku journal
+2009 - Axel unknown journal
+2010 - Larexene journal
+2011 - Vexen journal
+2012 - Marluxia journal
+2013 - Simba journal
+2014 - Dumbo journal
+2015 - Bambi journal
+2016 - Mushu journal
+2017 - Moogle journal
+2018 - Leon journal
+2019 - Yufie journal
+2020 - Aerith journal
+2021 - CID journal
+2022 - Alice journal
+2023- Red queen journal
+2024 - Rabbit man journal
+2025 - Red card man journal
+2026 - Black card man journal
+2027 - Chesire cat journal
+2028 - Hercules journal
+2029 - Phil journal
+2030 - Hades journal
+2031 - Cloud journal
+2032 - Aladin journal
+2033 - Genie journal
+2034 - Jasmine journal
+2035 - Iago journal
+2036 - JAfar journal
+2037 - Genie Jafar journal
+2038 - Halloween town sora journal
+2039 - Halloween town donald journal
+2040 - Halloween town goofy journal
+2041 - Jack journal
+2042 - Suisie journal
+2043 - Professor journal
+2044 - Oggie journal
+2045 - Pinochio journal
+2046 - Gepedo journal
+2047 - Ariel journal
+2048 - Sebastian journal
+2049 - Flounder journal
+2050 - Ursula journal
+2051 - Peter pan journal
+2052 - Tinkerbell journal
+2053 - Wendy journal
+2054 - Hook journal
+2055 - Beast journal
+2056 - Belle journal
+2057 - Maleficent journal
+2058 - Dragon journal
+2059 - Pooh journal
+2060 - Pigglet journal
+2061 - Owl journal
+2062 - Roo journal
+2063 - Eyore journal
+2064 - Tigger journal
+2065 - Rabbit journal
+2066 - Tidus journal
+2067 - Wako journal
+2068 - Selphie journal
+2069 - Heartless journal
+2070 - Soldire journal
+2071 - Large body journal
+2072 - Red rasphody journal
+2073 - Blue journal
+2074 - Yellow journal
+2075 - Green journal
+2076 - Power wild journal
+2077 - Bouncy wild journal
+2078 - Air soldier journal
+2079 - Bandit journal
+2080 - Flame body journal
+2081 - Barrel spider journal
+2082 - Search ghost journal
+2083 - Sea neon journal
+2084 - ScrewDriver journal
+2085 - Aqua tank journal
+2086 - Wight knight journal
+2087 - Gargoyle journal
+2088 - Pirate journal
+2089 - Air Pirate journal
+2090 - Dark ball journal
+2091 - Defender journal
+2092 - Wyvern journal
+2093 - Wizard journal
+2094 - Neo Shadow journal
+2095 - White mushroom journal
+2096 - Black fungus journal
+2097 - Creeper plant journal
+2098 - Tornado step journal
+2099 - Cresendo journal
+2100 - Guard armor journal
+2101 - Parasite cage journal
+2102 - Trick master journal
+2103 - Dark side journal
+2104 - Riku halloween town journal
+2105 - Mickey journal
+2106 - Halloween town mickey journal
+2107 - Ansem journal
+2108 - Lexaus journal
+2109 - Zexion journal
+2110 - DIZ journal
+2111 - Pluto journal
+--Possibly Theater mode? or Riku journal?
+3001 - Sora unknown
+3002 - Riku unknown
+3003 - Donald unknown
+3004 - Goofy unknown
+3005 - Jimminy unknown
+3008 - Moogle unknown
+3009 - Kairi unknown
+3012 - Dark riku unknown
+3107 - Leon unknown
+3114 - Pluto unknown
+3205 - Aladin unknown
+3207 - Genie w legs unknown
+3208 - Jasmine unknown
+3209 - Iago unknown
+3210 - Jafar unknown
+3305 - Phil unknown
+3306 - Hercules unknown
+3307 - Hades unknown
+3308 - Cloud unknown
+3405 - Alice unknown
+3406 - Red queen unknown
+3407 - Black card man unknown
+3408 - Red card man unknown
+3409 - Rabbit man unknown
+3410 - Chesire cat unknown
+.
+.
+.
+3808 - Hook unknown
+3905 - Beast unknown
+3906 - Belle unknown
+4005 - Pooh unknown
+4006 - Tigger unknown
+4007 - Piglet unknown
+4105 - Namine unknown 
+4205 - Tidus unknown
+4206 - Waku unknown
+4207 - Girl unknown
+4305 - Axel w/ weapons
+4306 - Ansem
+4307 - Marluxia with weapon
+4308 - Larxene with weapon
+4309 - Vexen with weapon
+4310 - Lexaus with weapon
+4311 - Mickey unknown
+4315 - Zexion with weapon
+4316 - Diz unknown
+4317 - Kairi charm
+9996 - Hook unknown
+
+Original - Player mlds
+0001 - Sora gameplay
+0002 - Keyblade 
+0011 - Sora Halloween town
+0012 - Keyblade Halloween town
+0101 - Riku 
+0111 - Riku Halloween town
+0201 - Dark riku
+0211 - Dark riku Halloween town
+0214 - Sora unknown
+0215 - Keyblade unknown
+0301 - Simba
+0302 - Dumbo
+0303 - Bambi
+0304 - Mushu
+0305 - Genie
+0306 - Tinkerbell
+0307 - Cloud
+0401 - Donald
+0402 - Goofy
+0403 - Aladdin 
+0404 - Ariel
+0405 - Jack
+0406 - Peter pan
+0407 - Beast
+0408 - Mickey
+0409 - Pluto
+0451 - Donald Halloween town
+0452 - Goofy Halloween town
+0458 - Mickey Halloween town
+0901 - Sora unknown
+0902 - Keyblade unknown
+1030 - Sora strange low poly
+1040 - Riku low poly
+1050 - Dark riku low poly
+1130 - Keyblade low poly
+1140 - Heart keyblade low poly
+2001 - KH2 sora
+2002 - KH2 Keyblade
+3001 - Map room
+.
+.
+.
+9900 - Another map room
+
+Original - Enemy
+0001 - Shadow
+0002 - Soldier
+0003 - Red nocturne
+0004 - Blue Rhapsody
+0005 - Yellow Opera
+0006 - Green Requiem
+0007 - Power Wild
+0008 - Bouncy wild
+0009 - Large body
+0010 - Fat bandit
+0011 - Bandit
+0012 - Wight Knight
+0013 - Gargoyle
+0014 - Search ghost
+0015 - Air soldier
+0016 - White mushroom
+0017 - Black fungus
+0018 - Sea Neon
+0019 - Screwdiver
+0020 - Aqua tank
+0021 - Pirate
+0022 - Air pirate
+0023 - Dark ball
+0024 - Wyvern
+0025 - Wizard
+0026 - Defender
+0027 - Neo Shadow
+0028 - Barrel spider
+0029 - Tornado step
+0030 - Crescendo
+0031 - Creeper plant
+0032 - Shadow halloween town?
+0033 - Search ghost halloween town
+0034 - White mushroom halloween town
+0035 - Black fungus halloween town
+0036 - Creeper plant halloween town
+0037 - Bee hive
+0038 - Bees
+0100 - Hooded figure
+0101 - Leon
+0102 - Guard armor
+0103 - Black card soldier
+0104 - Red card soldier
+0105 - Trick master
+0106 - Cloud
+0107 - Hades
+0108 - Genie jafar
+0109 - Oggie boogie
+0110 - Parasite cage (Texture not working, try blender 3.0)
+0111 - Ursula without face
+0112 - Hook
+0113 - Dragon maleficent
+0114 - Vexen sheild wont load
+0115 - Darkseid
+0116 - Dark riku
+0117 - Larxene
+0118 - Axel
+0119 - Marluxia 
+0120 - Marluxia mount
+0121 - Lexaus 
+0122 - Ansem
+0123 - Dark guardian
+0124 - Zexion w Riku sword
+0125 - Iago
+0126 - Lamp
+0127 - Axel weapon
+0128 - Axel weapon
+0129 - Axel weapon
+0130 - Axel weapon
+0131 - Larxene dagger
+0132 - Marluxia no weapon, probably mount rider? or the solo version
+0133 - Zexion book
+0134 - Marluxia texture not working
+0135 - Rose arrow
+0136 - Marluxia mount sythe
+0137 - Marluxia mount sythe
+0138 - Big Marluxia texture not working
+0139 - Marluxia wings
+0140 - Big marluxia skirt
+0201 - Ursula tentacle
+0202 - Ursula tentacle
+0203 - Ursula tentacle
+0204 - Ursula tentacle
+0205 - Lexaus weapon
+0206 - Genie jafar solid
+0207 - Fire lord
+0208 - Barbosa
+0210 - Barbosa cameleon
+0211 - Donald duck
+0212 - Goofy
+0213 - Giant nobody
+0214 - KH2 Sora
+0215 - Keyblade
+0216 - Dusk
+0217 - Sora unknown
+0220 - Large Body unknown
+0221 - Axel unknown
+0222 - Marluxia unknown
+0223 - Larxene unknown
+0224 - Lexaus with weapon
+0225 - Zexion unknown
+0226 - Vexen with weapon
+0227 - Ursula unknown
+0300 - Shadow unknown
+0301 - LArge body strange 
+0302 - Shadow unknown
+0303 - ???
+0304 - ???
+0305 - ???
+0306 - ???
+0307 - ???
+0500 - Beehive unknown
+0501 -  Bees unknown
+0900 - Test block
+0999 - Some metal scorpion
+9201 - Sora unknown
+9205 - Sora kh2 kh1 clothes
+9206 - Genie jafar unknown
+9207 - Fire lord
+9208 - Barbosa
+9209 - Pirate
+9210 - Barbosa cameleon
+9211 - Donald
+9212 - Goofy
+9213 - Giant nobody
+9214 - Sora kh2
+9215 - Keyblade
+9216 - Dusk
+9217 - Sora
+9218 - Hercules girl
+9219 - Donald
+9220 - Large body
+9221 - Axel
+
+IMZ Files All in the FORM folders
+0002 - In battle UI for things like level up, card numbers and charge icon
+0004 - Battle Pause
+0005 - UI for mini keyblade, card obtained text, premium text clear bonus text
+0006 - world selection text and world images.
+0008 - UI elements for Pooh minigames
+0009 - Monstro ui bar
+0050 - Card shape, numbers, and images like enemy, ally, and room cards
+0051 - Same as 50, but with halloween town goofy and donald
+0052 - Same as 50, includes _p imz files for pooh minigame icons
+0053 - Enemy card boss icons
+0054 - Journal character icons?
+0055 - Same as 54 but with halloween town riku and sora
+0060 - Sora HUD icons and bars
+0061 - Same as 60 but with halloween town sora
+0062 - Riku HUD icons and bars
+0063 - Get card text icon and text
+0070 - Pooh world combat UI
+0071 - Same as 0002, includes a second file for riku duel mode
+0100 - Menu deck editor tabs icons and text. Includes world map file with small icons for room types
+0102 - Room synthesis menu icons
+0103 - Level up menu icons
+0104 - Riku level up menu icons
+0105 - Premium card creation menu icons
+0106 - Save file icons and world icons
+0107 - Load file icons and world icons
+0108 - World warp menu icons
+0109 - Moogle shop menu icons
+0110 - Jimminy journal menu icons
+0111 - Pointer, aleart?
+0112 - Looks like jimminys journal but no jimminy
+0150 - Traverse town world icon and title
+0151 - Agrabah world icon and title
+0152 - Olympus world icon and title
+0153 - Wonderland world icon and title
+0154 - Monstro world icon and title
+0155 - Halloween town world icon and title
+0156 - Atlantica world icon and title
+0157 - Neverland world icon and title
+0158 - Hollow bastion world icon and title
+0159 - Pooh world icon and title
+0160 - Twilight town world icon and title
+0161 - Destiny islands world icon and title
+0162 - Castle oblivion world icon and title
+0180 - Castle oblivion icon
+0181 - Traverse town icon
+0182 - Wonderland icon
+0183 - Olympus icon
+0184 - Agrabah icon
+0185 - Halloween town icon
+0186 - Monstro icon
+0187 - Atlantica icon
+0188 - Neverland icon
+0189 - Neverland icon
+0190 - Pooh icon
+0191 - Twilight town icon
+0192 - Destiny island icon
+0193 - Not a IMZ file but has the journal icons for sora donald and goofy 
+0194 - Not a IMZ file but has the journal icons for riku and mickey 
+0195 - Pooh book closed
+-MiniGames
+0220 - Veggie panic tips screen, actual text is missing
+0221 - Veggie panic tips challenge mode
+0230 - Balloon glider tips screen, text missing
+0231 - Balloon glider challenge mode
+0240 - Tiggers Jump-a-thon tips, text missing
+0241 - Tigger challenge mode
+0250 - Bumble rumble tips screen
+0251 - Bumble rumble challenge mode
+0260 - Whirlwind plunge tips, text missing
+0261 - Whirlwind plunge challenge mode
+0270 - Monstros belly brawl tips screen
+-Slights
+0300 - Blitz slight tips screen, text missing
+0301 - Sonic blade, text missing
+0302 - Ars Arcanum text missing
+0303 - Strike raid
+0304 - Ragnarok text missing
+0305 - Trinity limit
+0306 - Sliding dash
+0307 - Stun impact
+0308 - Zantetsuken
+0309 - Fira
+0310 - Firaga
+0311 - Blizzara
+0312 - Blizzaga
+0313 - Thundara
+0314 - Thundaga
+0315 - Cura
+0316 - Curaga
+0317 - Gravira
+0318 - Gravaga
+0319 - Stopra
+0320 - Stopga
+0321 - Aerora
+0322 - Aeroga
+0323 - Proud roar lvl 2
+0324 - Proud roar lvl 3 
+0325 - Showtime lvl 2
+0326 - Showtime lvl 3
+0327 - Twinkle lvl 2, text missing
+0328 - Twinkle lvl 3, text missing
+0329 - Flare breath lvl 2, text missing
+0330 - Flare breath lvl 3, text missing
+0331 - Cross slash
+0332 - Cross slash +
+0333 - Omni slash text missing
+0334 - PAradise Lvl 2
+0335 - Paradise lvl 3
+0336 - Idyll romp
+0337 - Splash lvl 2 text missing
+0338 - Splash lvl 3 text missing
+0339 - Magic lvl 2
+0340 - Magic lvl 3
+0341 - Stardust Blitz text missing
+0342 - Goofy smash text missing
+0343 - Goofy tornado lvl 2
+0344 - Goofy tornado lvl 3
+0345 - Wild crush text missing
+0346 - Sandstorm lvl 2
+0347 - Sandstorm lvl 3
+0348 - Suprise lvl 2
+0349 - Suprise lvl 3
+0350 - SPiral wave lvl 2 text missing
+0351 - Spiral wave lvl 3 text missing
+0352 - Hummingbird lvl 2 text missing
+0353 - Hummingbird lvl 3 text missing
+0354 - Furious volley lvl 2 text missing
+0355 - Furious volley lvl 3 text missing
+0356 - Lucky bounty lvl 2
+0357 - Lucky bounty
+0358 - Warp
+0359 - WArpinator
+0360 - Terror
+0361 - Confuse
+0362 - Judgment
+0363 - Reflect raid
+0364 - Fire raid
+0365 - Blizzard raid
+0366 - Thunder raid
+0367 - Aqua splash text missing
+0368 - Lethal flame
+0369 - Freeze
+0370 - Firaga burst
+0371 - Raging storm text missing
+0372 - Magnet spiral
+0373 - Holy
+0374 - Gifted miracle
+0375 - MEga flare
+0376 - Shock impact
+0377 - Homing blizzara
+0378 - Synchro
+0379 - Bind
+0380 - Tornado text missing
+0381 - Quake
+0382 - Teleport
+-Help
+0383 - Highjump
+0384 - Glide
+0385 - Super glide
+-Riku Slights
+0386 - Dark break text missing
+0387 - Dark firaga
+0388 - Dark aura
+0389 - MM miracle LVl 2
+0390 - MM Miracle lvl 3
+0391 - Holy burst text missing
+0392 - Inverse burst text missing
+0393 - Impulse
+0394 - Dark impulse
+0395 - Maelstrom
+0396 - Dark maelstrom
+0397 - Barrage
+0398 - Dark barrage
+0399 - Activating dark mode
+
+0401 - Theater menu icons
+0403 - 0471 Cutscene icons
+0501 - Main menu title images
+0505 - More main menu title images
+0506 - Ending image
+0507 - Riku main menu title images
+0508 - Riku end image
+0509 - Easy end image
+0510 - Hard end image
+0511 - 100% end image
+0512 - Riku end easy
+0513 - Riku end hard
+0514 - Riku 100% end 
+3001 - Agrabah, olympus and traverse town map icons
+3002 - 3001 Agrabah
+3003 - 3001 Olympus
+3004 - Wonderland map icons
+3005 - Monstro map icons
+3006 - Halloween town map icons
+3007 - Atlantica map icons
+3008 - Neverland map icons
+3009 - Hollow bastion map icons
+3011 - Twilight town map icons
+3012 - Destiny islands map icons
+3013 - Castle oblivion map icons
+
+Lables - SYS folder
+0001 US UK_CT - Seems to have alot of in game menu text for the game to
+write out, things like character names, item names,enemy names.
+I think the sleights missing text is here
+0002 Sleight names and menu names
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
