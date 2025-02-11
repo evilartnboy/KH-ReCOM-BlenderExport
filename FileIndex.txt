@@ -19,7 +19,7 @@ Original-NPC MDLS
 0050 - Cutscene keyblade possibly unused
 0051 - High quality cutscene model unused in PC
 0053 - High quality Donald unused
-0101 - Sora location unknown
+0101 - Sora Guard armor cutscene
 0103 - Donald unknown
 0104 - Goofy unknown
 0105 - Aeirith
