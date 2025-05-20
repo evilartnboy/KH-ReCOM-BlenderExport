@@ -154,7 +154,7 @@ not one that is good. If you can figure out how to search for verts easier pleas
 
 Selecting the entire mesh we go to Mesh, split, faces and edges by verticies.
 
-Finally we can export. My keys model only has 4k verts so it should only take a minute. For mdls of over 12k you are looking at 10+ minutes per export.
+Finally we can export. Vertex count dosent have a major effect on export times anymore so get creative.
 
 For exporting you go to export and select the original file. Make sure you are not in edit mode or exporting will not work. Blender will then create a new file with the same name but with NEW at the end. This is your exported model. If you have the terminal open you can watch the process of exporting.
 ![14](https://github.com/user-attachments/assets/e1d3e7d1-f8ea-4632-85bc-ebaa0cffa030)
