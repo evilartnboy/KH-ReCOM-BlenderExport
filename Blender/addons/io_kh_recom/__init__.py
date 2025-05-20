@@ -522,6 +522,8 @@ def write_mdl_data2(context, filepath, use_some_setting):
         submodelslistloop = 0
         for model in submodelslist:
           submodelslistloop +=1
+          
+          
           #Get vertex count
           vertex_count = 0
           subModelVertexList = []
@@ -529,11 +531,20 @@ def write_mdl_data2(context, filepath, use_some_setting):
             vertex_count +=1
             subModelVertexList.append(vertexies)
           #print(vertex_count)
+          UVList =[mathutils.Vector((0, 0))]*vertex_count  #To store the UVs without having to search 
+          print("UVLIST: ", len(UVList))
+
+
+
           triangleList = []
+
+          
           
           normalvert = True
           addedVertTriOffset =-1
           largestVertOffset= -1
+          FlagaddedVertTriOffset =-1
+          FlaglargestVertOffset= -1
           for fa, face in enumerate(model.polygons):
                 
               triangleList.append(face.vertices[:])               
@@ -549,44 +560,61 @@ def write_mdl_data2(context, filepath, use_some_setting):
 
                 if normalvert == True and ver >largestVertOffset:
                   largestVertOffset = ver +1
+                  FlaglargestVertOffset = ver +1
               
-                if addedVertTriOffset == -1  and normalvert == False:                  
+                if addedVertTriOffset == -1  and normalvert == False: #As the for loop continues triangle list is getting larger, as soon as a non normal triangle is spotted addedVertTriOffset is set                  
                     addedVertTriOffset = len(triangleList)-1
+                    FlagaddedVertTriOffset = len(triangleList)-1
 
-                  
-                
+
+                    
+          
+                        
 
           #for all the non normal verts, reorder them
-          print(addedVertTriOffset)
-          print(largestVertOffset)
+          print("AddedVertTriOffset (First edited triangle)", addedVertTriOffset)
+          print("LargestVertOffset (First edited vertex)",largestVertOffset)
           #For every non normal triangle, order it into a new form of largestVertOffset+2 largestVertOffset+1 largestVertOffset, copying the vertecies data from 
           #the original tri to the new tris and swap them, swaping the verts in the triangle list too
 
+          print("Generating Uv List...") 
+          vertLoopDict = {} #structure vertexID : loopID, lets uvs find the correct vert it needs. Need the blender loop the vertex is in.
+          for face in model.polygons:
+            for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
+              uv_coords = model.uv_layers.active.data[loop_idx].uv
+                    
+              UVList[vert_idx]= uv_coords 
+              vertLoopDict [vert_idx] = loop_idx
+
+          
+          vertex_Dict = {} #structure vertexID : [tri#, position in tri]
+          for index, tri in enumerate(triangleList):
+                for tri_index, tri_vert in enumerate(tri):
+                  vertex_Dict[tri_vert] = [index, tri_index] 
 
           if addedVertTriOffset > -1:
+            if largestVertOffset == -1:
+              largestVertOffset = 0
             while addedVertTriOffset < len(triangleList):
-              original_tri = list(triangleList[addedVertTriOffset])              
-              #print("Original triangle",triangleList[addedVertTriOffset], "Tri ",addedVertTriOffset )
+                  original_tri = list(triangleList[addedVertTriOffset])              
+                  #print("Original triangle",triangleList[addedVertTriOffset], "Tri ",addedVertTriOffset )
+                  #Each original tri vert needs to be set after the search for the last one incase they are changed in the previous search 
               
-
-              orgi_triVert1 = list(triangleList[addedVertTriOffset])[0]     
-              for index, tri in enumerate(triangleList):
-                for tri_index, tri_vert in enumerate(tri):
-                  replacementTri = index
-                  replacementTriVertIndex =tri_index                     
+                  
+              
+                  orgi_triVert1 = list(triangleList[addedVertTriOffset])[0]
+                  replacementTri = vertex_Dict[largestVertOffset+2][0]
+                  replacementTriVertIndex = vertex_Dict[largestVertOffset+2][1]
+                  tri_vert = largestVertOffset+2
+                               
                   if tri_vert == largestVertOffset+2:
 
                     originalLoop = -1
                     foundLoop = -1
                     orgi_uv_coordsX = -1
                     orgi_uv_coordsY = -1
-                    for face in model.polygons:
-                      for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
-                        uv_coords = model.uv_layers.active.data[loop_idx].uv
-                        if vert_idx == orgi_triVert1:
-                          originalLoop = loop_idx
-                        if vert_idx == tri_vert:
-                          foundLoop = loop_idx
+                    originalLoop = vertLoopDict.get(orgi_triVert1)  
+                    foundLoop = vertLoopDict.get(tri_vert)     
                     if originalLoop != foundLoop:                   
                       orgi_uv_coordsX = model.uv_layers.active.data[originalLoop].uv.x
                       orgi_uv_coordsY = model.uv_layers.active.data[originalLoop].uv.y
@@ -595,9 +623,13 @@ def write_mdl_data2(context, filepath, use_some_setting):
                             
                       model.uv_layers.active.data[foundLoop].uv.x = orgi_uv_coordsX
                       model.uv_layers.active.data[foundLoop].uv.y = orgi_uv_coordsY 
-
-                    if index ==  addedVertTriOffset: #already on same triangle
-                      if tri_index == 0:
+                      
+                      UVList[tri_vert] = model.uv_layers.active.data[foundLoop].uv
+                      
+                      
+                    
+                    if replacementTri ==  addedVertTriOffset: #already on same triangle 
+                      if replacementTriVertIndex == 0:
                         print("Vert 0 already in correct tirangle and correct position")
                       else:
                         print("Vert 0 already in correct tirangle but incorrect position")  
@@ -605,10 +637,11 @@ def write_mdl_data2(context, filepath, use_some_setting):
                         temp_listVert = subModelVertexList[temp_triVert]
                         subModelVertexList[temp_triVert] = subModelVertexList[largestVertOffset+2] #copy the vertex data from found vertex to original
                         subModelVertexList[largestVertOffset+2] = temp_listVert
-                        original_tri[0] = original_tri[tri_index]
-                        original_tri[tri_index] = temp_triVert
+                        original_tri[0] = original_tri[replacementTriVertIndex]
+                        original_tri[replacementTriVertIndex] = temp_triVert
+                        
 
-                    else:
+                    else:#Not on the same triangle
                       tempVert1 = subModelVertexList[orgi_triVert1] #Vertex data of original tri vert 1
                       subModelVertexList[orgi_triVert1] = subModelVertexList[largestVertOffset+2] #copy the vertex data from found vertex to original
                       subModelVertexList[largestVertOffset+2] = tempVert1 #copy the vertex data from original to found vertex
@@ -617,28 +650,24 @@ def write_mdl_data2(context, filepath, use_some_setting):
                       original_tri[0] = largestVertOffset+2 #Write the new vert to original tri
                       new_tri1 = tuple(temp_tri1)
                       triangleList[replacementTri] = new_tri1 #Overwrite the found tri with temp one
-                    
+
+                    #Swap the values in dictionary
+                    vertex_Dict[orgi_triVert1], vertex_Dict[largestVertOffset+2] = vertex_Dict[largestVertOffset+2], vertex_Dict[orgi_triVert1]
+
                     new_new_tri = tuple(original_tri)
                     triangleList[addedVertTriOffset] = new_new_tri 
-
-
-              orgi_triVert2 = list(triangleList[addedVertTriOffset])[1]
-              for index, tri in enumerate(triangleList):
-                for tri_index, tri_vert in enumerate(tri):
-                  replacementTri = index
-                  replacementTriVertIndex =tri_index   
+                  #
+                  orgi_triVert2 = list(triangleList[addedVertTriOffset])[1]
+                  replacementTri = vertex_Dict[largestVertOffset+1][0]
+                  replacementTriVertIndex = vertex_Dict[largestVertOffset+1][1]
+                  tri_vert = largestVertOffset+1 
                   if tri_vert == largestVertOffset+1:
                     originalLoop = -1
                     foundLoop = -1
                     orgi_uv_coordsX = -1
                     orgi_uv_coordsY = -1
-                    for face in model.polygons:
-                      for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
-                        uv_coords = model.uv_layers.active.data[loop_idx].uv
-                        if vert_idx == orgi_triVert2:
-                          originalLoop = loop_idx
-                        if vert_idx == tri_vert:
-                          foundLoop = loop_idx
+                    originalLoop = vertLoopDict.get(orgi_triVert2)  
+                    foundLoop = vertLoopDict.get(tri_vert)   
                     if originalLoop != foundLoop:                   
                       orgi_uv_coordsX = model.uv_layers.active.data[originalLoop].uv.x
                       orgi_uv_coordsY = model.uv_layers.active.data[originalLoop].uv.y
@@ -647,8 +676,10 @@ def write_mdl_data2(context, filepath, use_some_setting):
                             
                       model.uv_layers.active.data[foundLoop].uv.x = orgi_uv_coordsX
                       model.uv_layers.active.data[foundLoop].uv.y = orgi_uv_coordsY 
-                    if index ==  addedVertTriOffset: #already on same triangle
-                      if tri_index == 1:
+                      UVList[tri_vert] = model.uv_layers.active.data[foundLoop].uv
+                      
+                    if replacementTri ==  addedVertTriOffset: #already on same triangle 
+                      if replacementTriVertIndex == 1:
                         print("Vert 1 already in correct tirangle and correct position")
                       else:
                         print("Vert 1 already in correct tirangle but incorrect position")  
@@ -656,8 +687,8 @@ def write_mdl_data2(context, filepath, use_some_setting):
                         temp_listVert = subModelVertexList[temp_triVert]
                         subModelVertexList[temp_triVert] = subModelVertexList[largestVertOffset+1] #copy the vertex data from found vertex to original
                         subModelVertexList[largestVertOffset+1] = temp_listVert
-                        original_tri[1] = original_tri[tri_index]
-                        original_tri[tri_index] = temp_triVert
+                        original_tri[1] = original_tri[replacementTriVertIndex]
+                        original_tri[replacementTriVertIndex] = temp_triVert
                     else:
                       tempVert2 = subModelVertexList[orgi_triVert2] #Vertex data of original tri vert 2
                       subModelVertexList[orgi_triVert2] = subModelVertexList[largestVertOffset+1] #copy the vertex data from found vertex to original
@@ -667,27 +698,22 @@ def write_mdl_data2(context, filepath, use_some_setting):
                       original_tri[1] = largestVertOffset+1 #Write the new vert to original tri
                       new_tri2 = tuple(temp_tri2)
                       triangleList[replacementTri] = new_tri2 #Overwrite the found tri with temp one
+                    #Swap the values in dictionary
+                    vertex_Dict[orgi_triVert2], vertex_Dict[largestVertOffset+1] = vertex_Dict[largestVertOffset+1], vertex_Dict[orgi_triVert2]
                     new_new_tri = tuple(original_tri)
                     triangleList[addedVertTriOffset] = new_new_tri 
-
-
-              orgi_triVert3 = list(triangleList[addedVertTriOffset])[2]
-              for index, tri in enumerate(triangleList):
-                for tri_index, tri_vert in enumerate(tri):
-                  replacementTri = index
-                  replacementTriVertIndex =tri_index 
+                  #
+                  orgi_triVert3 = list(triangleList[addedVertTriOffset])[2]
+                  replacementTri = vertex_Dict[largestVertOffset][0]
+                  replacementTriVertIndex = vertex_Dict[largestVertOffset][1]
+                  tri_vert = largestVertOffset
                   if tri_vert == largestVertOffset:
                     originalLoop = -1
                     foundLoop = -1
                     orgi_uv_coordsX = -1
                     orgi_uv_coordsY = -1
-                    for face in model.polygons:
-                      for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
-                        uv_coords = model.uv_layers.active.data[loop_idx].uv
-                        if vert_idx == orgi_triVert3:
-                          originalLoop = loop_idx
-                        if vert_idx == tri_vert:
-                          foundLoop = loop_idx
+                    originalLoop = vertLoopDict.get(orgi_triVert3)  
+                    foundLoop = vertLoopDict.get(tri_vert)   
                     if originalLoop != foundLoop:                   
                       orgi_uv_coordsX = model.uv_layers.active.data[originalLoop].uv.x
                       orgi_uv_coordsY = model.uv_layers.active.data[originalLoop].uv.y
@@ -696,8 +722,10 @@ def write_mdl_data2(context, filepath, use_some_setting):
                             
                       model.uv_layers.active.data[foundLoop].uv.x = orgi_uv_coordsX
                       model.uv_layers.active.data[foundLoop].uv.y = orgi_uv_coordsY 
-                    if index ==  addedVertTriOffset: #already on same triangle
-                      if tri_index == 2:
+                      UVList[tri_vert] = model.uv_layers.active.data[foundLoop].uv
+                      
+                    if replacementTri ==  addedVertTriOffset: #already on same triangle 
+                      if replacementTriVertIndex == 2:
                         print("Vert 2 already in correct tirangle and correct position")
                       else:
                         print("Vert 2 already in correct tirangle but incorrect position")  
@@ -705,8 +733,8 @@ def write_mdl_data2(context, filepath, use_some_setting):
                         temp_listVert = subModelVertexList[temp_triVert]
                         subModelVertexList[temp_triVert] = subModelVertexList[largestVertOffset] #copy the vertex data from found vertex to original
                         subModelVertexList[largestVertOffset] = temp_listVert
-                        original_tri[2] = original_tri[tri_index]
-                        original_tri[tri_index] = temp_triVert
+                        original_tri[2] = original_tri[replacementTriVertIndex]
+                        original_tri[replacementTriVertIndex] = temp_triVert
                     else:
                       tempVert3 = subModelVertexList[orgi_triVert3] #Vertex data of original tri vert 3
                       subModelVertexList[orgi_triVert3] = subModelVertexList[largestVertOffset] #copy the vertex data from found vertex to original
@@ -716,32 +744,37 @@ def write_mdl_data2(context, filepath, use_some_setting):
                       original_tri[2] = largestVertOffset #Write the new vert to original tri
                       new_tri3 = tuple(temp_tri3)
                       triangleList[replacementTri] = new_tri3 #Overwrite the found tri with temp one
+                    #Swap the values in dictionary
+                    vertex_Dict[orgi_triVert3], vertex_Dict[largestVertOffset] = vertex_Dict[largestVertOffset], vertex_Dict[orgi_triVert3]
                     new_new_tri = tuple(original_tri)
                     triangleList[addedVertTriOffset] = new_new_tri 
 
-              
-                
-              largestVertOffset+=3
-              
 
+                  largestVertOffset+=3
+                  new_new_tri = tuple(original_tri)
+                  triangleList[addedVertTriOffset] = new_new_tri
+                  print(submodelslistNames[submodelslistloop-1], "   New triangle",triangleList[addedVertTriOffset], "Tri ",addedVertTriOffset," /", len(triangleList) )
+                  addedVertTriOffset+=1
 
-             
-              new_new_tri = tuple(original_tri)
-              triangleList[addedVertTriOffset] = new_new_tri
-              print("     New triangle",triangleList[addedVertTriOffset], "Tri ",addedVertTriOffset )
-              addedVertTriOffset+=1
-
-
+          print("Generating flag list for each vertex..." )
           flagList =[] #To store the flags of a dmatag without having to search      
           flagvert = 0
-          while flagvert < vertex_count:  
+          if(FlagaddedVertTriOffset == -1):
+            FlagaddedVertTriOffset = len(triangleList)
+          while flagvert < FlaglargestVertOffset:  
+            if(flagvert%100 == 0 ):  
+              print(submodelslistNames[submodelslistloop-1], "Vert Flag: ",  flagvert, " / ", vertex_count ) 
+
             flag = -1
             vertInNextTri = False
             sawAFellowVert = False
+            #make triangle loop = to the tri# of a flagvert in vertDictionary vertex_Dict[flagvert][0]
             triangleLoop = 0
-            while triangleLoop < len(triangleList):
+
+            
+            while triangleLoop < FlagaddedVertTriOffset:
                   
-                  if triangleLoop+1 == len(triangleList):                    
+                  if triangleLoop+1 == FlagaddedVertTriOffset:                    
                     if vertInNextTri == False: 
                       if sawAFellowVert == True:               
                         flag = -1
@@ -795,16 +828,91 @@ def write_mdl_data2(context, filepath, use_some_setting):
                   
                   triangleLoop +=1                  
                   if vertInNextTri == True:
-                    triangleLoop = len(triangleList)
+                    triangleLoop = FlagaddedVertTriOffset
             flagList.append(flag)
             flagvert+=1
+
+          while flagvert < vertex_count:  
+            if(flagvert%100 == 0 ):  
+              print(submodelslistNames[submodelslistloop-1], "Vert Flag: ",  flagvert, " / ", vertex_count ) 
+
+            flag = -1
+            vertInNextTri = False
+            sawAFellowVert = False
+            #make triangle loop = to the tri# of a flagvert in vertDictionary vertex_Dict[flagvert][0]
+            triangleLoop = vertex_Dict[flagvert][0]
+
+                
+            if triangleLoop+1 == len(triangleList):                    
+                    if vertInNextTri == False: 
+                      if sawAFellowVert == True:               
+                        flag = -1
+                        
+                    if flagvert == vertex_count-1:
+                      flag = 32
+            elif flagvert == triangleList[triangleLoop][0]:
+                    for nextTriVerts in triangleList[triangleLoop+1]:
+                      if flagvert == nextTriVerts:                                                 
+                          vertInNextTri = True
+
+                    if vertInNextTri == True:                                            
+                      flag = 0  
+                    else:                      
+                      for currenttris in triangleList[triangleLoop]:
+                        for nexttris in triangleList[triangleLoop+1]:
+                          if currenttris == nexttris:                            
+                            sawAFellowVert = True
+                      
+                      if sawAFellowVert == False:                        
+                        flag = 0 
+            elif flagvert == triangleList[triangleLoop][1]: 
+                    for nextTriVerts in triangleList[triangleLoop+1]:
+                      if flagvert == nextTriVerts:                          
+                        vertInNextTri = True
+                    if vertInNextTri == True:
+                      flag = -1  
+                  
+            elif flagvert == triangleList[triangleLoop][2]:
+                    for nextTriVerts in triangleList[triangleLoop+1]:
+                        if flagvert == nextTriVerts:                          
+                          vertInNextTri = True
+
+                    if vertInNextTri == True:
+                      flag = 32 
+                    else:                     
+                      
+                      for currenttris in triangleList[triangleLoop]:
+                        for nexttris in triangleList[triangleLoop+1]:
+                          if currenttris == nexttris:                            
+                            sawAFellowVert = True
+                      if sawAFellowVert == False:
+                         
+                        if triangleList[triangleLoop][2]< triangleList[triangleLoop][1]:
+                          if triangleList[triangleLoop][2]< triangleList[triangleLoop][0]:
+                            flag = -1
+                        else:
+                          flag = 32 
+                         
+                  
+                  
+                  
+            flagList.append(flag)
+            flagvert+=1
+                   
+               
             
+            
+            
+            
+                
+          
 
           #Int vertecies processed = 0
           vertecies_processed = 0
           #bool lastVIF = false
           lastVIF = False
           #While vertecies processed < vertex count (Until all the vertecies in the model are processed)
+          print("Generating dmaTags (Groups of vertexies and their data)" )
           while vertecies_processed < vertex_count:
             #int vertexset = 0
             vertexset = 0
@@ -825,14 +933,14 @@ def write_mdl_data2(context, filepath, use_some_setting):
               if vertecies_processed+vertexset+1 < len(flagList):                
                   
                 if flagList[vertecies_processed+vertexset] == -1 and flagList[vertecies_processed+vertexset+1] == -1:                
-                    print("all good")                    
+                    print("all good, ", vertecies_processed, "/ ", vertex_count," processed")                    
                 else:
                   while flagList[vertecies_processed+vertexset] != -1 and vertexset > 0 or flagList[vertecies_processed+vertexset+1] != -1 and vertexset > 0:
                     vertexset-=1
                   if vertexset <= 0 and flagList[vertecies_processed+vertexset] != -1 or vertexset <= 0 and flagList[vertecies_processed+vertexset+1] != -1 :
                     while flagList[vertecies_processed+vertexset] != -1  or flagList[vertecies_processed+vertexset+1] != -1 :
                       vertexset+=1
-                  print("fixed, new vertex count:", vertexset)  
+                  print("fixed, new vertex count:", vertexset," ",  vertecies_processed, "/ ", vertex_count, "processed")  
                 
                 
 
@@ -928,14 +1036,7 @@ def write_mdl_data2(context, filepath, use_some_setting):
               #For bytes 31-32 write the bone index
               Newmdl.write(struct.pack('<h', boneIndex))
               
-              my_uv = mathutils.Vector((0, 0))              
-
-              for face in model.polygons:
-                    for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
-                      uv_coords = model.uv_layers.active.data[loop_idx].uv
-                      if vert_idx == vert+vertecies_processed:
-                          my_uv = uv_coords                        
-              
+              my_uv =UVList[vertecies_processed+vert] 
                 
               UVx = my_uv.x
               Newmdl.write(struct.pack('<f', UVx))
@@ -995,10 +1096,14 @@ def write_mdl_data2(context, filepath, use_some_setting):
               vertex_count +=1
               transModelVertexList.append(vertexies)
             #print(vertex_count)
+            UVList =[mathutils.Vector((0, 0))]*vertex_count  #To store the UVs without having to search 
+            print("UVLIST: ", len(UVList))
             triangleList = []
             normalvert = True
             addedVertTriOffset =-1
             largestVertOffset= -1
+            FlagaddedVertTriOffset =-1
+            FlaglargestVertOffset= -1
             for fa, face in enumerate(model2.polygons):
                   
                 triangleList.append(face.vertices[:])               
@@ -1014,51 +1119,68 @@ def write_mdl_data2(context, filepath, use_some_setting):
 
                   if normalvert == True and ver >largestVertOffset:
                     largestVertOffset = ver +1
-                
-                  if addedVertTriOffset == -1  and normalvert == False:                  
+                    FlaglargestVertOffset = ver +1
+              
+                  if addedVertTriOffset == -1  and normalvert == False: #As the for loop continues triangle list is getting larger, as soon as a non normal triangle is spotted addedVertTriOffset is set                  
                       addedVertTriOffset = len(triangleList)-1
+                      FlagaddedVertTriOffset = len(triangleList)-1
+
 
                     
-                  
+            
+                 
 
             #for all the non normal verts, reorder them
-            print(addedVertTriOffset)
-            print(largestVertOffset)
+            print("AddedVertTriOffset (First edited triangle)", addedVertTriOffset)
+            print("LargestVertOffset (First edited vertex)",largestVertOffset)
+            #For every non normal triangle, order it into a new form of largestVertOffset+2 largestVertOffset+1 largestVertOffset, copying the vertecies data from 
+            #the original tri to the new tris and swap them, swaping the verts in the triangle list too
+            print("Generating Uv List...")
+            vertLoopDict = {}#structure vertexID : loopID, lets uvs find the correct vert it needs. Need the blender loop the vertex is in.
+            for face in model2.polygons:
+              for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
+                vertLoopDict [vert_idx] = loop_idx
+                uv_coords = model2.uv_layers.active.data[loop_idx].uv                    
+                UVList[vert_idx]= uv_coords
+
+            vertex_Dict = {} #structure vertexID : [tri#, position in tri]
+            for index, tri in enumerate(triangleList):
+                  for tri_index, tri_vert in enumerate(tri):
+                    vertex_Dict[tri_vert] = [index, tri_index] 
             #For every non normal triangle, order it into a new form of largestVertOffset+2 largestVertOffset+1 largestVertOffset, copying the vertecies data from 
             #the original tri to the new tris and swap them, swaping the verts in the triangle list too
             if addedVertTriOffset > -1:
+              if largestVertOffset == -1:
+                largestVertOffset = 0
               while addedVertTriOffset < len(triangleList):
-                original_tri = list(triangleList[addedVertTriOffset])              
-                #print("Original triangle",triangleList[addedVertTriOffset], "Tri ",addedVertTriOffset )
-                
-
-                orgi_triVert1 = list(triangleList[addedVertTriOffset])[0]     
-                for index, tri in enumerate(triangleList):
-                  for tri_index, tri_vert in enumerate(tri):
-                    replacementTri = index
-                    replacementTriVertIndex =tri_index                     
+                    original_tri = list(triangleList[addedVertTriOffset])              
+                    #print("Original triangle",triangleList[addedVertTriOffset], "Tri ",addedVertTriOffset )
+                    
+                    
+                      
+                    
+                    
+                    orgi_triVert1 = list(triangleList[addedVertTriOffset])[0]
+                    replacementTri = vertex_Dict[largestVertOffset+2][0]
+                    replacementTriVertIndex = vertex_Dict[largestVertOffset+2][1]
+                    tri_vert = largestVertOffset+2                    
                     if tri_vert == largestVertOffset+2:
                       originalLoop = -1
                       foundLoop = -1
                       orgi_uv_coordsX = -1
                       orgi_uv_coordsY = -1
-                      for face in model2.polygons:
-                        for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
-                          uv_coords = model2.uv_layers.active.data[loop_idx].uv
-                          if vert_idx == orgi_triVert1:
-                            originalLoop = loop_idx
-                          if vert_idx == tri_vert:
-                            foundLoop = loop_idx
+                      originalLoop = vertLoopDict.get(orgi_triVert1)  
+                      foundLoop = vertLoopDict.get(tri_vert) 
                       if originalLoop != foundLoop:                   
                         orgi_uv_coordsX = model2.uv_layers.active.data[originalLoop].uv.x
                         orgi_uv_coordsY = model2.uv_layers.active.data[originalLoop].uv.y
                         found_uv_coords =model2.uv_layers.active.data[foundLoop].uv
-                        model2.uv_layers.active.data[originalLoop].uv = found_uv_coords                    
-                              
+                        model2.uv_layers.active.data[originalLoop].uv = found_uv_coords       
                         model2.uv_layers.active.data[foundLoop].uv.x = orgi_uv_coordsX
                         model2.uv_layers.active.data[foundLoop].uv.y = orgi_uv_coordsY 
-                      if index ==  addedVertTriOffset: #already on same triangle
-                        if tri_index == 0:
+                        UVList[tri_vert] = model2.uv_layers.active.data[foundLoop].uv
+                      if replacementTri ==  addedVertTriOffset: #already on same triangle
+                        if replacementTriVertIndex == 0:
                           print("Vert 0 already in correct tirangle and correct position")
                         else:
                           print("Vert 0 already in correct tirangle but incorrect position")  
@@ -1066,9 +1188,9 @@ def write_mdl_data2(context, filepath, use_some_setting):
                           temp_listVert = transModelVertexList[temp_triVert]
                           transModelVertexList[temp_triVert] = transModelVertexList[largestVertOffset+2] #copy the vertex data from found vertex to original
                           transModelVertexList[largestVertOffset+2] = temp_listVert
-                          original_tri[0] = original_tri[tri_index]
+                          original_tri[0] = original_tri[replacementTriVertIndex]
 
-                          original_tri[tri_index] = temp_triVert
+                          original_tri[replacementTriVertIndex] = temp_triVert
 
                       else:
                         tempVert1 = transModelVertexList[orgi_triVert1] #Vertex data of original tri vert 1
@@ -1079,37 +1201,33 @@ def write_mdl_data2(context, filepath, use_some_setting):
                         original_tri[0] = largestVertOffset+2 #Write the new vert to original tri
                         new_tri1 = tuple(temp_tri1)
                         triangleList[replacementTri] = new_tri1 #Overwrite the found tri with temp one
+                      #Swap the values in dictionary
+                      vertex_Dict[orgi_triVert1], vertex_Dict[largestVertOffset+2] = vertex_Dict[largestVertOffset+2], vertex_Dict[orgi_triVert1]  
                       new_new_tri = tuple(original_tri)
                       triangleList[addedVertTriOffset] = new_new_tri 
 
 
-                orgi_triVert2 = list(triangleList[addedVertTriOffset])[1]
-                for index, tri in enumerate(triangleList):
-                  for tri_index, tri_vert in enumerate(tri):
-                    replacementTri = index
-                    replacementTriVertIndex =tri_index   
+                    orgi_triVert2 = list(triangleList[addedVertTriOffset])[1]
+                    replacementTri = vertex_Dict[largestVertOffset+1][0]
+                    replacementTriVertIndex = vertex_Dict[largestVertOffset+1][1]
+                    tri_vert = largestVertOffset+1   
                     if tri_vert == largestVertOffset+1:
                       originalLoop = -1
                       foundLoop = -1
                       orgi_uv_coordsX = -1
                       orgi_uv_coordsY = -1
-                      for face in model2.polygons:
-                        for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
-                          uv_coords = model2.uv_layers.active.data[loop_idx].uv
-                          if vert_idx == orgi_triVert2:
-                            originalLoop = loop_idx
-                          if vert_idx == tri_vert:
-                            foundLoop = loop_idx
+                      originalLoop = vertLoopDict.get(orgi_triVert2)  
+                      foundLoop = vertLoopDict.get(tri_vert) 
                       if originalLoop != foundLoop:                   
                         orgi_uv_coordsX = model2.uv_layers.active.data[originalLoop].uv.x
                         orgi_uv_coordsY = model2.uv_layers.active.data[originalLoop].uv.y
                         found_uv_coords =model2.uv_layers.active.data[foundLoop].uv
-                        model2.uv_layers.active.data[originalLoop].uv = found_uv_coords                    
-                              
+                        model2.uv_layers.active.data[originalLoop].uv = found_uv_coords   
                         model2.uv_layers.active.data[foundLoop].uv.x = orgi_uv_coordsX
                         model2.uv_layers.active.data[foundLoop].uv.y = orgi_uv_coordsY 
-                      if index ==  addedVertTriOffset: #already on same triangle
-                        if tri_index == 1:
+                        UVList[tri_vert] = model2.uv_layers.active.data[foundLoop].uv
+                      if replacementTri ==  addedVertTriOffset: #already on same triangle
+                        if replacementTriVertIndex == 1:
                           print("Vert 1 already in correct tirangle and correct position")
                         else:
                           print("Vert 1 already in correct tirangle but incorrect position")  
@@ -1117,8 +1235,8 @@ def write_mdl_data2(context, filepath, use_some_setting):
                           temp_listVert = transModelVertexList[temp_triVert]
                           transModelVertexList[temp_triVert] = transModelVertexList[largestVertOffset+1] #copy the vertex data from found vertex to original
                           transModelVertexList[largestVertOffset+1] = temp_listVert
-                          original_tri[1] = original_tri[tri_index]
-                          original_tri[tri_index] = temp_triVert
+                          original_tri[1] = original_tri[replacementTriVertIndex]
+                          original_tri[replacementTriVertIndex] = temp_triVert
                       else:
                         tempVert2 = transModelVertexList[orgi_triVert2] #Vertex data of original tri vert 2
                         transModelVertexList[orgi_triVert2] = transModelVertexList[largestVertOffset+1] #copy the vertex data from found vertex to original
@@ -1128,28 +1246,24 @@ def write_mdl_data2(context, filepath, use_some_setting):
                         original_tri[1] = largestVertOffset+1 #Write the new vert to original tri
                         new_tri2 = tuple(temp_tri2)
                         triangleList[replacementTri] = new_tri2 #Overwrite the found tri with temp one
+                        #Swap the values in dictionary
+                      vertex_Dict[orgi_triVert2], vertex_Dict[largestVertOffset+1] = vertex_Dict[largestVertOffset+1], vertex_Dict[orgi_triVert2]
                       new_new_tri = tuple(original_tri)
                       triangleList[addedVertTriOffset] = new_new_tri 
-
-
-                orgi_triVert3 = list(triangleList[addedVertTriOffset])[2]
-                for index, tri in enumerate(triangleList):
-                  for tri_index, tri_vert in enumerate(tri):
-                    replacementTri = index
-                    replacementTriVertIndex =tri_index   
                     
+
+
+                    orgi_triVert3 = list(triangleList[addedVertTriOffset])[2]
+                    replacementTri = vertex_Dict[largestVertOffset][0]
+                    replacementTriVertIndex = vertex_Dict[largestVertOffset][1]
+                    tri_vert = largestVertOffset
                     if tri_vert == largestVertOffset:
                       originalLoop = -1
                       foundLoop = -1
                       orgi_uv_coordsX = -1
                       orgi_uv_coordsY = -1
-                      for face in model2.polygons:
-                        for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
-                          uv_coords = model2.uv_layers.active.data[loop_idx].uv
-                          if vert_idx == orgi_triVert3:
-                            originalLoop = loop_idx
-                          if vert_idx == tri_vert:
-                            foundLoop = loop_idx
+                      originalLoop = vertLoopDict.get(orgi_triVert3)  
+                      foundLoop = vertLoopDict.get(tri_vert) 
                       if originalLoop != foundLoop:                   
                         orgi_uv_coordsX = model2.uv_layers.active.data[originalLoop].uv.x
                         orgi_uv_coordsY = model2.uv_layers.active.data[originalLoop].uv.y
@@ -1158,8 +1272,10 @@ def write_mdl_data2(context, filepath, use_some_setting):
                               
                         model2.uv_layers.active.data[foundLoop].uv.x = orgi_uv_coordsX
                         model2.uv_layers.active.data[foundLoop].uv.y = orgi_uv_coordsY 
-                      if index ==  addedVertTriOffset: #already on same triangle
-                        if tri_index == 2:
+                        UVList[tri_vert] = model2.uv_layers.active.data[foundLoop].uv
+                        
+                      if replacementTri ==  addedVertTriOffset: #already on same triangle
+                        if replacementTriVertIndex == 2:
                           print("Vert 2 already in correct tirangle and correct position")
                         else:
                           print("Vert 2 already in correct tirangle but incorrect position")  
@@ -1167,8 +1283,8 @@ def write_mdl_data2(context, filepath, use_some_setting):
                           temp_listVert = transModelVertexList[temp_triVert]
                           transModelVertexList[temp_triVert] = transModelVertexList[largestVertOffset] #copy the vertex data from found vertex to original
                           transModelVertexList[largestVertOffset] = temp_listVert
-                          original_tri[2] = original_tri[tri_index]
-                          original_tri[tri_index] = temp_triVert
+                          original_tri[2] = original_tri[replacementTriVertIndex]
+                          original_tri[replacementTriVertIndex] = temp_triVert
                       else:
                         tempVert3 = transModelVertexList[orgi_triVert3] #Vertex data of original tri vert 3
                         transModelVertexList[orgi_triVert3] = transModelVertexList[largestVertOffset] #copy the vertex data from found vertex to original
@@ -1178,30 +1294,47 @@ def write_mdl_data2(context, filepath, use_some_setting):
                         original_tri[2] = largestVertOffset #Write the new vert to original tri
                         new_tri3 = tuple(temp_tri3)
                         triangleList[replacementTri] = new_tri3 #Overwrite the found tri with temp one
+                      
+                      vertex_Dict[orgi_triVert3], vertex_Dict[largestVertOffset] = vertex_Dict[largestVertOffset], vertex_Dict[orgi_triVert3]
                       new_new_tri = tuple(original_tri)
                       triangleList[addedVertTriOffset] = new_new_tri 
+                    
+
+
+                
+                    
 
                 
                   
-                largestVertOffset+=3
-                
+                    largestVertOffset+=3
+                    
 
 
-              
-                new_new_tri = tuple(original_tri)
-                triangleList[addedVertTriOffset] = new_new_tri
-                print("     New triangle",triangleList[addedVertTriOffset], "Tri ",addedVertTriOffset )
-                addedVertTriOffset+=1
+                  
+                    new_new_tri = tuple(original_tri)
+                    triangleList[addedVertTriOffset] = new_new_tri
+                    print(transModelNames[transModelloop-1],"  New triangle",triangleList[addedVertTriOffset], "Tri ",addedVertTriOffset," /", len(triangleList)  )
+                    addedVertTriOffset+=1
 
+            print("Generating flag list for each vertex..." )
             flagList =[] #To store the flags of a dmatag without having to search      
             flagvert = 0
-            while flagvert < vertex_count:  
+            if(FlagaddedVertTriOffset == -1):
+              FlagaddedVertTriOffset = len(triangleList)
+            while flagvert < FlaglargestVertOffset:  
+              if(flagvert%100 == 0 ):  
+                print(submodelslistNames[submodelslistloop-1], "Vert Flag: ",  flagvert, " / ", vertex_count ) 
+
               flag = -1
               vertInNextTri = False
               sawAFellowVert = False
+              #make triangle loop = to the tri# of a flagvert in vertDictionary vertex_Dict[flagvert][0]
               triangleLoop = 0
-              while triangleLoop < len(triangleList):
-                    if triangleLoop+1 == len(triangleList):                    
+
+              
+              while triangleLoop < FlagaddedVertTriOffset:
+                    
+                    if triangleLoop+1 == FlagaddedVertTriOffset:                    
                       if vertInNextTri == False: 
                         if sawAFellowVert == True:               
                           flag = -1
@@ -1255,7 +1388,74 @@ def write_mdl_data2(context, filepath, use_some_setting):
                     
                     triangleLoop +=1                  
                     if vertInNextTri == True:
-                      triangleLoop = len(triangleList)
+                      triangleLoop = FlagaddedVertTriOffset
+              flagList.append(flag)
+              flagvert+=1
+
+            while flagvert < vertex_count:  
+              if(flagvert%100 == 0 ):  
+                print(submodelslistNames[submodelslistloop-1], "Vert Flag: ",  flagvert, " / ", vertex_count ) 
+
+              flag = -1
+              vertInNextTri = False
+              sawAFellowVert = False
+              #make triangle loop = to the tri# of a flagvert in vertDictionary vertex_Dict[flagvert][0]
+              triangleLoop = vertex_Dict[flagvert][0]
+
+                  
+              if triangleLoop+1 == len(triangleList):                    
+                      if vertInNextTri == False: 
+                        if sawAFellowVert == True:               
+                          flag = -1
+                          
+                      if flagvert == vertex_count-1:
+                        flag = 32
+              elif flagvert == triangleList[triangleLoop][0]:
+                      for nextTriVerts in triangleList[triangleLoop+1]:
+                        if flagvert == nextTriVerts:                                                 
+                            vertInNextTri = True
+
+                      if vertInNextTri == True:                                            
+                        flag = 0  
+                      else:                      
+                        for currenttris in triangleList[triangleLoop]:
+                          for nexttris in triangleList[triangleLoop+1]:
+                            if currenttris == nexttris:                            
+                              sawAFellowVert = True
+                        
+                        if sawAFellowVert == False:                        
+                          flag = 0 
+              elif flagvert == triangleList[triangleLoop][1]: 
+                      for nextTriVerts in triangleList[triangleLoop+1]:
+                        if flagvert == nextTriVerts:                          
+                          vertInNextTri = True
+                      if vertInNextTri == True:
+                        flag = -1  
+                    
+              elif flagvert == triangleList[triangleLoop][2]:
+                      for nextTriVerts in triangleList[triangleLoop+1]:
+                          if flagvert == nextTriVerts:                          
+                            vertInNextTri = True
+
+                      if vertInNextTri == True:
+                        flag = 32 
+                      else:                     
+                        
+                        for currenttris in triangleList[triangleLoop]:
+                          for nexttris in triangleList[triangleLoop+1]:
+                            if currenttris == nexttris:                            
+                              sawAFellowVert = True
+                        if sawAFellowVert == False:
+                          
+                          if triangleList[triangleLoop][2]< triangleList[triangleLoop][1]:
+                            if triangleList[triangleLoop][2]< triangleList[triangleLoop][0]:
+                              flag = -1
+                          else:
+                            flag = 32 
+                          
+                    
+                    
+                    
               flagList.append(flag)
               flagvert+=1
             
@@ -1266,6 +1466,7 @@ def write_mdl_data2(context, filepath, use_some_setting):
             #bool lastVIF = false
             lastVIF = False
             #While vertecies processed < vertex count (Until all the vertecies in the model are processed)
+            print("Generating dmaTags (Groups of vertexies and their data)" )
             while vertecies_processed < vertex_count:
               #int vertexset = 0
               vertexset = 0
@@ -1286,14 +1487,14 @@ def write_mdl_data2(context, filepath, use_some_setting):
                 if vertecies_processed+vertexset+1 < len(flagList):                
                     
                   if flagList[vertecies_processed+vertexset] == -1 and flagList[vertecies_processed+vertexset+1] == -1:                
-                      print("all good")                    
+                       print("all good, ", vertecies_processed, "/ ", vertex_count," processed")                   
                   else:
                     while flagList[vertecies_processed+vertexset] != -1 and vertexset > 0 or flagList[vertecies_processed+vertexset+1] != -1 and vertexset > 0:
                       vertexset-=1
                     if vertexset <= 0 and flagList[vertecies_processed+vertexset] != -1 or vertexset <= 0 and flagList[vertecies_processed+vertexset+1] != -1 :
                       while flagList[vertecies_processed+vertexset] != -1  or flagList[vertecies_processed+vertexset+1] != -1 :
                         vertexset+=1
-                    print("fixed, new vertex count:", vertexset)  
+                    print("fixed, new vertex count:", vertexset," ",  vertecies_processed, "/ ", vertex_count, "processed")   
       
               #Wrtie a DmaTag to new
               #The first byte will be ((vertexset*48)/16) + 3 , then 00 00 10
@@ -1391,13 +1592,7 @@ def write_mdl_data2(context, filepath, use_some_setting):
                 Newmdl.write(struct.pack('<h', boneIndex))
                 
                 #For bytes 33-36 write UV x to new
-                my_uv = mathutils.Vector((0, 0))
-                
-                for face in model2.polygons:
-                  for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
-                    uv_coords = model2.uv_layers.active.data[loop_idx].uv
-                    if vert_idx == vert+vertecies_processed:
-                        my_uv = uv_coords
+                my_uv =UVList[vertecies_processed+vert] 
                         
 
                 UVx = my_uv.x
@@ -1408,8 +1603,11 @@ def write_mdl_data2(context, filepath, use_some_setting):
                 Newmdl.write(struct.pack('<f', UVy))
                 #For bytes 41-44 write float 1
                 Newmdl.write(struct.pack('<f', 1))
-                #For bytes 45-46 write the texture index float to new              
-                Newmdl.write(struct.pack('<H', transModelloop-1))
+                #For bytes 45-46 write the texture index float to new  
+                #Need to find the correct texture for the transparent model
+                NeededName = transModelNames[transModelloop-1]  
+                third_to_last_char = NeededName[-3]#This char should be the material number          
+                Newmdl.write(struct.pack('<H', int(third_to_last_char)))
                 #Bytes 47-48
                 Newmdl.write(bytes.fromhex('0000'))
                 
