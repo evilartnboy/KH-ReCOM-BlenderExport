@@ -480,6 +480,13 @@ def write_mdl_data2(context, filepath, use_some_setting):
 
         lastAddModelNameCorrection =0
         for obj in bpy.data.objects:
+          if (obj.type == 'MESH'):
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.mode_set(mode='EDIT')            
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.mesh.delete_loose(use_verts=True, use_edges=True, use_faces=False)
+            bpy.ops.object.mode_set( mode = 'OBJECT' ) 
+
           print(obj.name) 
           last_chars = obj.name[-4:]
           if obj.name + '_mesh_data' in bpy.data.meshes:
