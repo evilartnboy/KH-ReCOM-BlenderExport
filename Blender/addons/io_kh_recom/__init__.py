@@ -555,7 +555,7 @@ def write_mdl_data2(context, filepath, use_some_setting):
                 if ver == face.vertices[:][0]:
                   
 
-                  if abs(ver - face.vertices[:][1]) >2 or abs(ver - face.vertices[:][2]) >2: #if vert 1 and 2 are within 2 range of 0 then its a normal vert and should be ordered lowest to heighest
+                  if abs(ver - face.vertices[:][1]) >2 or abs(ver - face.vertices[:][2]) >2 or use_some_setting == True: #if vert 1 and 2 are within 2 range of 0 then its a normal vert and should be ordered lowest to heighest
                     normalvert = False
 
                 if normalvert == True and ver >largestVertOffset:
@@ -589,10 +589,10 @@ def write_mdl_data2(context, filepath, use_some_setting):
           
           vertex_Dict = {} #structure vertexID : [tri#, position in tri]
           for index, tri in enumerate(triangleList):
-                for tri_index, tri_vert in enumerate(tri):
+                for tri_index, tri_vert in enumerate(tri):   
                   vertex_Dict[tri_vert] = [index, tri_index] 
 
-          if addedVertTriOffset > -1:
+          if addedVertTriOffset > -1 :
             if largestVertOffset == -1:
               largestVertOffset = 0
             while addedVertTriOffset < len(triangleList):
@@ -761,144 +761,145 @@ def write_mdl_data2(context, filepath, use_some_setting):
           flagvert = 0
           if(FlagaddedVertTriOffset == -1):
             FlagaddedVertTriOffset = len(triangleList)
+           
           while flagvert < FlaglargestVertOffset:  
-            if(flagvert%100 == 0 ):  
-              print(submodelslistNames[submodelslistloop-1], "Vert Flag: ",  flagvert, " / ", vertex_count ) 
+              if(flagvert%100 == 0 ):  
+                print(submodelslistNames[submodelslistloop-1], "Vert Flag: ",  flagvert, " / ", vertex_count ) 
 
-            flag = -1
-            vertInNextTri = False
-            sawAFellowVert = False
-            #make triangle loop = to the tri# of a flagvert in vertDictionary vertex_Dict[flagvert][0]
-            triangleLoop = 0
+              flag = -1
+              vertInNextTri = False
+              sawAFellowVert = False
+              #make triangle loop = to the tri# of a flagvert in vertDictionary vertex_Dict[flagvert][0]
+              triangleLoop = 0
 
-            
-            while triangleLoop < FlagaddedVertTriOffset:
-                  
-                  if triangleLoop+1 == FlagaddedVertTriOffset:                    
-                    if vertInNextTri == False: 
-                      if sawAFellowVert == True:               
-                        flag = -1
+              
+              while triangleLoop < FlagaddedVertTriOffset:
+                    
+                    if triangleLoop+1 == FlagaddedVertTriOffset:                    
+                      if vertInNextTri == False: 
+                        if sawAFellowVert == True:               
+                          flag = -1
+                          
+                      if flagvert == vertex_count-1:
+                        flag = 32
+                    elif flagvert == triangleList[triangleLoop][0]:
+                      for nextTriVerts in triangleList[triangleLoop+1]:
+                        if flagvert == nextTriVerts:                                                 
+                            vertInNextTri = True
+
+                      if vertInNextTri == True:                                            
+                        flag = 0  
+                      else:                      
+                        for currenttris in triangleList[triangleLoop]:
+                          for nexttris in triangleList[triangleLoop+1]:
+                            if currenttris == nexttris:                            
+                              sawAFellowVert = True
                         
-                    if flagvert == vertex_count-1:
-                      flag = 32
-                  elif flagvert == triangleList[triangleLoop][0]:
-                    for nextTriVerts in triangleList[triangleLoop+1]:
-                      if flagvert == nextTriVerts:                                                 
-                          vertInNextTri = True
-
-                    if vertInNextTri == True:                                            
-                      flag = 0  
-                    else:                      
-                      for currenttris in triangleList[triangleLoop]:
-                        for nexttris in triangleList[triangleLoop+1]:
-                          if currenttris == nexttris:                            
-                            sawAFellowVert = True
-                      
-                      if sawAFellowVert == False:                        
-                        flag = 0 
-                  elif flagvert == triangleList[triangleLoop][1]: 
-                    for nextTriVerts in triangleList[triangleLoop+1]:
-                      if flagvert == nextTriVerts:                          
-                        vertInNextTri = True
-                    if vertInNextTri == True:
-                      flag = -1  
-                  
-                  elif flagvert == triangleList[triangleLoop][2]:
-                    for nextTriVerts in triangleList[triangleLoop+1]:
+                        if sawAFellowVert == False:                        
+                          flag = 0 
+                    elif flagvert == triangleList[triangleLoop][1]: 
+                      for nextTriVerts in triangleList[triangleLoop+1]:
                         if flagvert == nextTriVerts:                          
                           vertInNextTri = True
+                      if vertInNextTri == True:
+                        flag = -1  
+                    
+                    elif flagvert == triangleList[triangleLoop][2]:
+                      for nextTriVerts in triangleList[triangleLoop+1]:
+                          if flagvert == nextTriVerts:                          
+                            vertInNextTri = True
 
+                      if vertInNextTri == True:
+                        flag = 32 
+                      else:                     
+                        
+                        for currenttris in triangleList[triangleLoop]:
+                          for nexttris in triangleList[triangleLoop+1]:
+                            if currenttris == nexttris:                            
+                              sawAFellowVert = True
+                        if sawAFellowVert == False:
+                          
+                          if triangleList[triangleLoop][2]< triangleList[triangleLoop][1]:
+                            if triangleList[triangleLoop][2]< triangleList[triangleLoop][0]:
+                              flag = -1
+                          else:
+                            flag = 32 
+                          
+                    
+                    
+                    triangleLoop +=1                  
                     if vertInNextTri == True:
-                      flag = 32 
-                    else:                     
-                      
-                      for currenttris in triangleList[triangleLoop]:
-                        for nexttris in triangleList[triangleLoop+1]:
-                          if currenttris == nexttris:                            
-                            sawAFellowVert = True
-                      if sawAFellowVert == False:
-                         
-                        if triangleList[triangleLoop][2]< triangleList[triangleLoop][1]:
-                          if triangleList[triangleLoop][2]< triangleList[triangleLoop][0]:
-                            flag = -1
-                        else:
-                          flag = 32 
-                         
-                  
-                  
-                  triangleLoop +=1                  
-                  if vertInNextTri == True:
-                    triangleLoop = FlagaddedVertTriOffset
-            flagList.append(flag)
-            flagvert+=1
+                      triangleLoop = FlagaddedVertTriOffset
+              flagList.append(flag)
+              flagvert+=1
 
           while flagvert < vertex_count:  
-            if(flagvert%100 == 0 ):  
-              print(submodelslistNames[submodelslistloop-1], "Vert Flag: ",  flagvert, " / ", vertex_count ) 
+              if(flagvert%100 == 0 ):  
+                print(submodelslistNames[submodelslistloop-1], "Vert Flag: ",  flagvert, " / ", vertex_count ) 
 
-            flag = -1
-            vertInNextTri = False
-            sawAFellowVert = False
-            #make triangle loop = to the tri# of a flagvert in vertDictionary vertex_Dict[flagvert][0]
-            triangleLoop = vertex_Dict[flagvert][0]
+              flag = -1
+              vertInNextTri = False
+              sawAFellowVert = False
+              #make triangle loop = to the tri# of a flagvert in vertDictionary vertex_Dict[flagvert][0]
+              triangleLoop = vertex_Dict[flagvert][0]
 
-                
-            if triangleLoop+1 == len(triangleList):                    
-                    if vertInNextTri == False: 
-                      if sawAFellowVert == True:               
-                        flag = -1
-                        
-                    if flagvert == vertex_count-1:
-                      flag = 32
-            elif flagvert == triangleList[triangleLoop][0]:
-                    for nextTriVerts in triangleList[triangleLoop+1]:
-                      if flagvert == nextTriVerts:                                                 
-                          vertInNextTri = True
-
-                    if vertInNextTri == True:                                            
-                      flag = 0  
-                    else:                      
-                      for currenttris in triangleList[triangleLoop]:
-                        for nexttris in triangleList[triangleLoop+1]:
-                          if currenttris == nexttris:                            
-                            sawAFellowVert = True
-                      
-                      if sawAFellowVert == False:                        
-                        flag = 0 
-            elif flagvert == triangleList[triangleLoop][1]: 
-                    for nextTriVerts in triangleList[triangleLoop+1]:
-                      if flagvert == nextTriVerts:                          
-                        vertInNextTri = True
-                    if vertInNextTri == True:
-                      flag = -1  
                   
-            elif flagvert == triangleList[triangleLoop][2]:
-                    for nextTriVerts in triangleList[triangleLoop+1]:
+              if triangleLoop+1 == len(triangleList):                    
+                      if vertInNextTri == False: 
+                        if sawAFellowVert == True:               
+                          flag = -1
+                          
+                      if flagvert == vertex_count-1:
+                        flag = 32
+              elif flagvert == triangleList[triangleLoop][0]:
+                      for nextTriVerts in triangleList[triangleLoop+1]:
+                        if flagvert == nextTriVerts:                                                 
+                            vertInNextTri = True
+
+                      if vertInNextTri == True:                                            
+                        flag = 0  
+                      else:                      
+                        for currenttris in triangleList[triangleLoop]:
+                          for nexttris in triangleList[triangleLoop+1]:
+                            if currenttris == nexttris:                            
+                              sawAFellowVert = True
+                        
+                        if sawAFellowVert == False:                        
+                          flag = 0 
+              elif flagvert == triangleList[triangleLoop][1]: 
+                      for nextTriVerts in triangleList[triangleLoop+1]:
                         if flagvert == nextTriVerts:                          
                           vertInNextTri = True
+                      if vertInNextTri == True:
+                        flag = -1  
+                    
+              elif flagvert == triangleList[triangleLoop][2]:
+                      for nextTriVerts in triangleList[triangleLoop+1]:
+                          if flagvert == nextTriVerts:                          
+                            vertInNextTri = True
 
-                    if vertInNextTri == True:
-                      flag = 32 
-                    else:                     
-                      
-                      for currenttris in triangleList[triangleLoop]:
-                        for nexttris in triangleList[triangleLoop+1]:
-                          if currenttris == nexttris:                            
-                            sawAFellowVert = True
-                      if sawAFellowVert == False:
-                         
-                        if triangleList[triangleLoop][2]< triangleList[triangleLoop][1]:
-                          if triangleList[triangleLoop][2]< triangleList[triangleLoop][0]:
-                            flag = -1
-                        else:
-                          flag = 32 
-                         
-                  
-                  
-                  
-            flagList.append(flag)
-            flagvert+=1
-                   
+                      if vertInNextTri == True:
+                        flag = 32 
+                      else:                     
+                        
+                        for currenttris in triangleList[triangleLoop]:
+                          for nexttris in triangleList[triangleLoop+1]:
+                            if currenttris == nexttris:                            
+                              sawAFellowVert = True
+                        if sawAFellowVert == False:
+                          
+                          if triangleList[triangleLoop][2]< triangleList[triangleLoop][1]:
+                            if triangleList[triangleLoop][2]< triangleList[triangleLoop][0]:
+                              flag = -1
+                          else:
+                            flag = 32 
+                          
+                    
+                    
+                    
+              flagList.append(flag)
+              flagvert+=1
+              
                
             
             
@@ -1114,7 +1115,7 @@ def write_mdl_data2(context, filepath, use_some_setting):
                   if ver == face.vertices[:][0]:
                     
 
-                    if abs(ver - face.vertices[:][1]) >2 or abs(ver - face.vertices[:][2]) >2: #if vert 1 and 2 are within 2 range of 0 then its a normal vert and should be ordered lowest to heighest
+                    if abs(ver - face.vertices[:][1]) >2 or abs(ver - face.vertices[:][2]) >2 or use_some_setting == True: #if vert 1 and 2 are within 2 range of 0 then its a normal vert and should be ordered lowest to heighest
                       normalvert = False
 
                   if normalvert == True and ver >largestVertOffset:
@@ -1730,9 +1731,9 @@ class ExportKhReComMdl(Operator, ExportHelper):
     # List of operator properties, the attributes will be assigned
     # to the class instance from the operator settings before calling.
     use_setting: BoolProperty(
-        name="Example Boolean",
-        description="Example Tooltip",
-        default=True,
+        name="All Custom Fast export",
+        description="If the entire model is made up custom mesh and there is no original that is needed this will speed up the export.",
+        default=False,
     ) # type: ignore
 
     type: EnumProperty(
