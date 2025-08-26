@@ -140,6 +140,11 @@ class MeshParser:
       bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
     ###############################################################################################
+    #Bone table data structure:
+    #16 bytes for bone name stirng
+    #2 bytes for parent bone int
+    #2 bytes for bone int
+    ###############################################################################################
     for i in range(bone_count): #for each bone in the model, probably offset 64
       print("----------------------------------------------------------------------Bone#", i)
       
@@ -180,21 +185,73 @@ class MeshParser:
       
       if not self._skip_armature_creation:
         bone = armature.armature_data.edit_bones.new(bone_name)
+
         bone.tail = (0.025, 0, 0) #Tail bone location
         bone.use_inherit_rotation = True 
         bone.use_local_location = True
         bone.matrix = global_matrix
         if parent_index >= 0:
           bone.parent = armature.armature_data.edit_bones[parent_index]
+        
       
       ##############################################################################################
 
     
     if not self._skip_armature_creation:
       armature.armature_obj.rotation_euler = (math.pi / 2, 0, 0) #Blender rotation
+
+    #Code for connecting parent tail to children
+    parent2children = {}
+
+    for bone in bpy.data.armatures[armature_basename+'_Armature'].edit_bones:
+        if bone.parent is not None:
+            if bone.parent.name in parent2children:
+                parent2children[bone.parent.name].append(bone)
+            else:
+                parent2children[bone.parent.name] = [bone]
+
+
+    for name in parent2children:
+        if len(parent2children[name]) == 1:
+            if name != next(iter(parent2children)):
+              
+              parent = bpy.data.armatures[armature_basename+'_Armature'].edit_bones[name]
+              parent.tail = parent2children[name][0].head
+              parent.children[0].use_connect = 1
+    
+    #Code for having childrenless bones follow parent direction
+    for bone in bpy.data.armatures[armature_basename+'_Armature'].edit_bones:
+        # Check if the bone is disconnected from its parent, has a parent,
+        # and has no children.
+        if  not bone.children:
+            parent_bone = bone.parent
+            
+            # Get the world space head position of the parent
+            parent_head_world =armature.armature_data.edit_bones[0].matrix @  parent_bone.head
+            print(parent_head_world)
+            # Get the world space head position of the current bone
+            bone_head_world = armature.armature_data.edit_bones[0].matrix @ bone.head
+            
+            # Calculate the vector from the parent's head to the bone's head
+            direction_vec = bone_head_world - parent_head_world
+            
+            # Normalize the vector to use it for direction
+            if direction_vec.length > 0:
+                direction_vec.normalize()
+                
+                # Set the bone's tail to be at a certain distance away from the head,
+                # along the new direction vector.
+                # Use a postive vector to point the tail away from the parent.
+                new_tail_position_local = bone.head + (direction_vec * bone.length)
+                bone.tail = new_tail_position_local
+
+
+    if not self._skip_armature_creation:
+      
       bpy.ops.object.mode_set(mode=current_mode, toggle=False)
       armature.armature_obj.select_set(state=True)
     
+
     return armature
 
   def _parse_texture_table(self, f, texture_table_offs, texture_table_count):
