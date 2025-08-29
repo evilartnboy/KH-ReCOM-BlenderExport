@@ -223,7 +223,7 @@ class MeshParser:
     for bone in bpy.data.armatures[armature_basename+'_Armature'].edit_bones:
         # Check if the bone is disconnected from its parent, has a parent,
         # and has no children.
-        if  not bone.children:
+        if  not bone.children and bone.parent:
             parent_bone = bone.parent
             
             # Get the world space head position of the parent
