@@ -1,0 +1,126 @@
+When listing bytes sequentially they will be listed in decimal but starting from 0 as it would in a hex editor.
+Hex values will be read in little endian
+
+Beginning pointers to sub models:
+These pointers starting at offset 0 of the MDL file will point to any sub model in the file and to any shadow model in the file.
+The pointer is called the model offset and is added to any other offsets in the model data.
+They are read in uint 32, taking up 4 bytes and go until there are several bytes of zeros, usually ending where the first model offset begins.
+
+Ex:
+Bytes 0-3: Model offset 
+Bytes 4-7: Shadow model offset
+.
+.
+.
+The offset found in model offset
+
+Sub model data:
+Offsets here are relevant to the beginning of the sub model, or in other words the model offset
+Sub model data begins with several pointers and int values to information about it, such as pointers to tables and bone/texture counts.
+
+Bytes 0-1: Bone count int 16
+Bytes 2-3: Unknown flag, is 01 03 in a normal model and 01 01 in a shadow model
+Bytes 4-7: Bone table offset uint32. This offset leads to the table of bone names and parents, remember to add model offset
+Bytes 8-11: Transform table offset uint32. This is the location data of the bones and includes the [Bone Index]
+Bytes 12-15: Texture table count uint32. The number of textures used.
+Bytes 16-19: Texture table offset uint32. This points to the string table of texture names. Texture names are checked to the model RTM, can have
+multiple textures in the MDL point to the same texture name in RTM.
+Bytes 20-23: Vif opaque offset. This is the offset to the visible vertex data packaged in DmaTags
+Bytes 24-27: Vif translucent offset. This is the offset to translucent vertices, meaning their textures will be see through if there is transparency. If there is no transparent vertices in the model then it is just 4 bytes of zeros
+Bytes 28-31: Bone constraint data offset. Im still not sure exactly how this data works but it the last part of the sub model and is needed for bones to function.
+Bytes 32-63: Unknown bytes, some models have data in the bytes while others have all the byes as CC. In testing setting it all to CC still works for sora.
+
+
+Bone table data:
+This table has data for both the string name of the bone and 2 ints for its parent and its own number. Root has a bone parent of -1 and number of 0
+Bytes 0-15: Name String 
+Bytes 16-17: Parent bone int16
+Bytes 18-19: Own bone int16
+
+This structure continues immediately after for each bone up to bone count, then the bone transform table starts
+
+Bone transform table:
+This table contains position and rotation? data for the bones, possibly even their position relative to their parents.
+you see im not exactly sure what each value in this 4x4 matrix represents but it is transposed and then @ with the matrix of the local matrix
+to get its global data for blender
+
+The bone index consists of 16 floats, for a total of 64 bytes of data for each bone and continues until all the bone data is done.
+More study needs to be done to figure out the purpose of each float
+
+Texture table offset:
+This table contains the string names of each texture used in that sub model. These textures are ordered sequentially starting at 0 when referenced
+later in the vertex data. The names of the texture corresponds to the name in the RTM file of the model. A sub model can have multiple of the same
+texture assigned to the same sub model if that is desired for whatever reason.
+
+Each texture consists of 32 bytes of string data, where anything that isn't a character is just 00
+
+Vif Opaque offset:
+This is the meat of the MDL file, containing the vertex data for all non transparent vertices. The data here is packed into DmaTags that were used to explain to the ps2 how to load the data. In these DmaTags are vif packets, packets of vertices in groups. At the end of the vertex data there is either another DmaTag, or an ending Tag signaling the end of the data.
+
+DmaTag: Consists of the DmaTagHead, STCYCL and UNPACK commands, and vertex information, totaling to 48 bytes of data
+
+Starting with the DmaTagHead we have:
+Byte 0: Vertex set int 16, this is the size of the vertex packet in vertecies, dynamic but my blender plugin has it set at 74 or less depending on
+ending flags of vertecies.
+Bytes 1-3: 00 00 10
+
+Then are the STCYCL and UNPACK commands: These commands determine how much data to unpack and how to unpack it. Its for the ps2 but the pc game 
+uses this data.
+Bytes 4-13: 00 00 00 00 04 04 00 01 00 80
+Byte 14: Num field, This field is multiplied by 10 to determine the amount of data to be unpacked. I have mine in the blender exporter set to C8
+but can be dynamic to (Vertex set*3)+2
+Byte 15 : 6C
+Bytes 16-19: Part of the data to unpack same as num field. Mine is set to C8 00 00 00
+
+Next is the vertex information
+Bytes 20-21: Vertex table count as signed int16
+Bytes 22-23: 01 00
+Bytes 24-25: Vertex count as signed int16. Same as vertex table count
+Bytes 26-27: Unique value. Im not sure what this value is supposed to represent but I just copy it from the model im working on into its updated version. The key blade has E7 00
+Bytes 28-29: Mode bytes, 06 00 in normal models, 10 00 in shadow models.
+Bytes 30-31: 00 9C
+Byte 32: Vertex count unsinged char int
+Bytes 33-47: 80 00 00 00 40 3E 30 12 04 00 00 00 00 00 00
+
+Now we start with the vertex data of a vertex packet. The data for each vertex will be listed sequentially until it reaches the end of the packet and puts its end tag. The vertex data is 48 bytes for a normal model and 32 bytes for the shadow models, as they skip the texture data.
+
+Bytes 1-2: Flag int, it is checked if the value is either 0 or 32. Other values seen include -1. This is the face orientation of the triangle formed. 0 and 32 switches it, -1 is for no triangle. 
+Bytes 3-4 00 00
+Bytes 5-8 vtx_weight float, variable weights are supported but I just stick to 1
+Bytes 9-12 00 00 00 00
+Bytes 13-16 ?? No clue but 00ing it does not change anything. Values seen are for normal  00 20 00 00 and for -1 flags 00 A0 00 00
+Bytes 17-20 X position float
+Bytes 21-24 Y position float
+Bytes 25-28 Z position float
+Bytes 29-30 Parent bone int X 4 (No clue why)
+Bytes 31-32 Parent bone int
+Bytes 33-36 UV X float
+Bytes 37-40 UV Y float
+Bytes 41-44 Float 1
+Bytes 45-46 Texture index int16
+Bytes 47-48 00 00
+
+After all the vertices in the packet are written it will output a 16 byte ending tag of 
+00 00 00 17 00 00 00 00 00 00 00 00 00 00 00 00
+
+Next one of 2 things will happen
+Either the next DmaTag will begin or if it was the last of the vertex info then it will put out another 16 byte ending tag of
+00 00 00 60 00 00 00 00 00 00 00 00 00 00 00 00
+
+Vif Translucent Offset:
+If the sub model has translucent vertex data and the Vif translucent offset is set to something other than 00 00 00 00, then the DmaTag for the 
+translucent vertices will appear here immediately after the end of the opaque data second ending tag. It will then proceed to do the same thing for 
+the translucent packets.
+
+Bone constraint data: This data marks the end of a sub model. It contains information about bones that the game deems important but isn't important for loading the model into blender. Like the transform data im not sure what each part of the data means but do know ways of having it filled in.
+The bone constraint data consists of 6 floats for each bones, and if the number of bones is odd then add 8 bytes of 00s to the end. Testing has shown that if you copy over the data from the first two bones, then set the rest of the floats to 00 00 97 B7 then it should function.
+
+After the end of that data will either be the start of the next sub model pointed to by its sub model offset at the start of the MDL file, say for
+a sub model 2 or a shadow model, or it will be the end of the document.
+
+
+
+
+
+
+
