@@ -202,48 +202,48 @@ class MeshParser:
 
     #Code for connecting parent tail to children
     parent2children = {}
+    if not self._skip_armature_creation:
+      for bone in bpy.data.armatures[armature_basename+'_Armature'].edit_bones:
+          if bone.parent is not None:
+              if bone.parent.name in parent2children:
+                  parent2children[bone.parent.name].append(bone)
+              else:
+                  parent2children[bone.parent.name] = [bone]
 
-    for bone in bpy.data.armatures[armature_basename+'_Armature'].edit_bones:
-        if bone.parent is not None:
-            if bone.parent.name in parent2children:
-                parent2children[bone.parent.name].append(bone)
-            else:
-                parent2children[bone.parent.name] = [bone]
 
-
-    for name in parent2children:
-        if len(parent2children[name]) == 1:
-            if name != next(iter(parent2children)):
-              
-              parent = bpy.data.armatures[armature_basename+'_Armature'].edit_bones[name]
-              parent.tail = parent2children[name][0].head
-              parent.children[0].use_connect = 1
-    
-    #Code for having childrenless bones follow parent direction
-    for bone in bpy.data.armatures[armature_basename+'_Armature'].edit_bones:
-        # Check if the bone is disconnected from its parent, has a parent,
-        # and has no children.
-        if  not bone.children and bone.parent:
-            parent_bone = bone.parent
-            
-            # Get the world space head position of the parent
-            parent_head_world =armature.armature_data.edit_bones[0].matrix @  parent_bone.head
-            print(parent_head_world)
-            # Get the world space head position of the current bone
-            bone_head_world = armature.armature_data.edit_bones[0].matrix @ bone.head
-            
-            # Calculate the vector from the parent's head to the bone's head
-            direction_vec = bone_head_world - parent_head_world
-            
-            # Normalize the vector to use it for direction
-            if direction_vec.length > 0:
-                direction_vec.normalize()
+      for name in parent2children:
+          if len(parent2children[name]) == 1:
+              if name != next(iter(parent2children)):
                 
-                # Set the bone's tail to be at a certain distance away from the head,
-                # along the new direction vector.
-                # Use a postive vector to point the tail away from the parent.
-                new_tail_position_local = bone.head + (direction_vec * bone.length)
-                bone.tail = new_tail_position_local
+                parent = bpy.data.armatures[armature_basename+'_Armature'].edit_bones[name]
+                parent.tail = parent2children[name][0].head
+                parent.children[0].use_connect = 1
+    
+      #Code for having childrenless bones follow parent direction
+      for bone in bpy.data.armatures[armature_basename+'_Armature'].edit_bones:
+          # Check if the bone is disconnected from its parent, has a parent,
+          # and has no children.
+          if  not bone.children and bone.parent:
+              parent_bone = bone.parent
+              
+              # Get the world space head position of the parent
+              parent_head_world =armature.armature_data.edit_bones[0].matrix @  parent_bone.head
+              #print(parent_head_world)
+              # Get the world space head position of the current bone
+              bone_head_world = armature.armature_data.edit_bones[0].matrix @ bone.head
+              
+              # Calculate the vector from the parent's head to the bone's head
+              direction_vec = bone_head_world - parent_head_world
+              
+              # Normalize the vector to use it for direction
+              if direction_vec.length > 0:
+                  direction_vec.normalize()
+                  
+                  # Set the bone's tail to be at a certain distance away from the head,
+                  # along the new direction vector.
+                  # Use a postive vector to point the tail away from the parent.
+                  new_tail_position_local = bone.head + (direction_vec * bone.length)
+                  bone.tail = new_tail_position_local
 
 
     if not self._skip_armature_creation:
@@ -440,9 +440,9 @@ class MeshParser:
               ]
           if has_uv:#True for sora and keyblade. The UVs determine where on the uv texture map the vertex is
             uv = f.read_nfloat32(2) #Reads the x and y uv positions. Y is inverted with 1-y further down
-            ##print("UV:", uv)
+            #print("UV:", uv)
             
-         # print("-------------------------------------Offset end:", f.tell()+8)
+          #print("-------------------------------------Offset end:", f.tell()+8)
           v_offs += vertex_byte_size
 
         v_mixed = mathutils.Vector((0, 0, 0, 0))
@@ -451,7 +451,7 @@ class MeshParser:
 
      
         #----------------------------------------------------------Solve for unknown matrix, in this case original mdl xyz values, slightly off due to rounding
-        x = np.dot(np.linalg.inv(self._armature.bone_matrices[bone_index]), v_mixed) 
+        #x = np.dot(np.linalg.inv(self._armature.bone_matrices[bone_index]), v_mixed) 
         #np.linalg.inv(A)  is simply the inverse of A, np.dot is the dot product
         #print ("Vertex# :", len(submesh.vtx), "Flag:", flag)  
         #print("Vertex ", len(submesh.vtx), "UV ", uv[0],uv[1])
