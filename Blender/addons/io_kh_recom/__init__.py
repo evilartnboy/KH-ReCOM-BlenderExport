@@ -251,7 +251,998 @@ from . import readutil
 import binascii
 import struct
 import mathutils
+import math
 import numpy as np
+import bpy
+def write_mdl_data3(context, filepath, use_some_setting):
+  
+  #Step 1: Need to determine how many models are there, and which ones are shadow models
+  #The models in blender are made in the order they are read in, so the model offsets at the begining of the file should be in the same order
+  #Models that have multiple textures to them make seperate models, the textures are read from their texture table. The model in blender will have their model number, followed by their mat number
+  #Using the same logic as in the parser script we can find the relevant offsets for the models
+
+  #The offsets for model offs need to be updated to adjusted locations
+  #If at model offset + 12 (The texture table count) it is 0, then it is a shadow model. The begining to the end of that model will be copied without change, need to determine exact start. Only change will be its model offset
+  #At exactly model offset is bone count in 2 bytes, then ?? ??, then is bone_table_offs(Needs to be added to model offset)in 4 bytes, then transform_table_offs(Needs to be added to model offset) in 4 bytes. All of these will not change. After is the texture table offsets
+  #After the model offset +12 is the texture tabel count, texture table offset(Needs to be added to model offset),vif_opaque_offs (Needs to be added to model offset),vif_translucent_offs (Needs to be added to model offset),then bone data. 
+  #After the bone data i belive it starts with the first texture table names list, which is a list of strings of length 32 read a texture table count number of times
+  #After that is the location of model off+ vif_opaque_offs , which lands directly on the first DMAtag
+
+  #A VIF packet is consisted of a DmaTag (a calculation for offset to the next DMATag consisting of 1 byte QWC and 2 bytes 00 and one byte 10. Or if its the last DMATAG it will be 00 00 00 60), 
+  #QWC can be found as ((V_count*48)/16) + 3 
+  # STCYCL and UNPACK commands(Skipped in blender)(Needed in game) [00 00 00 00 04 04 00 01 00 80 ?? ?? ?? 00 00 00] it seems the 3 ?? can be made 0 without issue , then a vertex tabel consisting of [vertex_table_count, _, vertex_count, (Value unique to model), mode][5 int16, Vertex table count, 01 00, Vertex count, ??, mode]. 
+    # The entire begining part of the packet is from DMATag to the end of the vertex tabel variables(and at the end of a vertex table are the bytes 00 9C XX 80 00 00 00 40 3E 30 12 04 00 00 00 00 00 00 Where XX is the vertex count) is 48 bytes
+  
+    #Finally the rest of the packet is vertex data, starting imediatley after at offset modelOffs + vif_opaque/transparent_offs +48
+    #Vertecies start and end imediatley after one another
+    '''
+    A mdl vertex is 48 bytes
+    Offset start
+    Bytes 1-2: Flag int, it is checked if the value is either 0 or 32. Other values seen include -1. This is the face orientation of the triangle formed. 0 and 32 switches it, -1 is for no triangle. 
+    Bytes 3-4 are skipped
+    Bytes 5-8 vtx_weight float
+    Bytes 9-12 00 00 00 00
+    Bytes 13-16 ?? No clue but 00ing it does not change anything Values seen are for normal  00 20 00 00 and for -1 flags 00A00000
+    Bytes 17-20 X position float
+    Bytes 21-24 Y position float
+    Bytes 25-28 Z position float
+    Bytes 29-30 Parent bone int X 4 (No clue why)
+    Bytes 31-32 Parent bone int
+    Bytes 33-36 UV X float
+    Bytes 37-40 UV Y float
+    Bytes 41-44 Float 1
+    Bytes 45-46 Texture index int16
+    Bytes 47-48
+
+    '''
+    '''
+    Shadow models only go to byte 32
+
+
+    '''
+
+
+    #After the last vertex in a table add values 00 00 00 17 00 00 00 00 00 00 00 00 00 00 00 00 before next DMAtag
+    # The data between the last DMATag 1610612736 and the new one is 12 bytes, 00 00 00 00 00 00 00 00 00 00 00 00. After will 60 if its the end of the model, or a new DMATAG for the transparent model
+    #If its before a new model then everything from that point till the next model offset should be coppied
+
+
+  #When the importer is parsing VIF packets it checks to see if the texture index of the current packet is in the submesh, if it is then the packet is assigned to an existing submesh, if not it makes a new submesh for those vertecies and all that come after.
+  #The order in blender may not be accurate as the transparent texture model may show up before the second texture submesh
+  #In general, there will be a ending for models, transparent models, and shadow models
+
+  #Things that will need updating:
+    '''''
+    Model offsets for each model in the mdl file, read at the begining of the file
+    Bone and texture data should stay the same so that shouldnt need changing
+    vif_translucent_offs, since opaque size will be different any new translucent offs will need to be recalculated. 
+    '''''
+
+
+  #-------------------Pseudo code
+
+    #Open old and new mdl files
+    mdl_dirname = os.path.dirname(filepath)
+    mdl_basename = os.path.splitext(os.path.basename(filepath))[0]
+    
+    NEWfilepath = mdl_dirname + '\\'+ mdl_basename + 'NEW.mdl'
+    Oldmdl = readutil.BinaryFileReader(filepath)
+    Newmdl = open(NEWfilepath, 'wb')
+
+    #count the amount of main models in blender, denoted by the _0 first number in their name
+    mdlname = ""
+    mainModelCount = 0
+    submodelslist = []
+    submodelslistNames = []
+    for obj in bpy.data.objects:
+      if (obj.type == 'MESH'):
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.mode_set(mode='EDIT')            
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.delete_loose(use_verts=True, use_edges=True, use_faces=False)
+        bpy.ops.object.mode_set( mode = 'OBJECT' ) 
+      print(obj.name) 
+      if mdlname == "":
+        mdlname = obj.name
+      last_chars = obj.name[-4:]
+      print(obj.name[7])
+      index = obj.name.find("_")
+      if int(obj.name[index+1])+1 > mainModelCount:
+        mainModelCount +=1
+      
+      if obj.name + '_mesh_data' in bpy.data.meshes:
+         
+        submodelslist.append(obj.data)
+        submodelslistNames.append(obj.name)
+
+      #Merge the loose subobjects into their main one          
+          
+      if obj.name[:-4] + '_mesh_data' +last_chars in bpy.data.meshes:
+          
+          if "_"+str(obj.name[7]) in obj.name:             
+            bpy.ops.object.select_all(action='DESELECT')   
+            #Join a loose subobject with .0001 in its name to its main one, should be the previous one in the submodel list
+            lastAddModelNameCorrection = len(submodelslistNames)-1
+            
+            bpy.data.objects[obj.name].select_set(True)  
+            bpy.data.objects[submodelslistNames[lastAddModelNameCorrection]].select_set(True)
+            bpy.context.view_layer.objects.active = bpy.data.objects[submodelslistNames[lastAddModelNameCorrection]]
+            bpy.ops.object.join()   
+            bpy.context.active_object.name = submodelslistNames[lastAddModelNameCorrection]
+            submodelslist[lastAddModelNameCorrection] = bpy.context.active_object.data
+            bpy.ops.object.select_all(action='DESELECT')
+      
+
+
+
+    #Make a empty list called newOffsetList. This list will be appended in the writing loop
+    newOffsetList = []
+
+    #Wrtie in temp model offsets for each main model. We will come back at the end and write in the values written into newOffsetList
+    Newmdl.seek(0)
+    pointerTotal = mainModelCount
+    mainModelTempWriteLoop =0
+    while mainModelTempWriteLoop < mainModelCount:
+      Newmdl.write(bytes.fromhex('00000000')) 
+      mainModelTempWriteLoop+=1
+    if pointerTotal % 4 == 0:#If there are already the max pointers allocated for this block of 4
+      Newmdl.write(bytes.fromhex('00000000')) 
+      Newmdl.write(bytes.fromhex('00000000')) 
+      Newmdl.write(bytes.fromhex('00000000')) 
+      Newmdl.write(bytes.fromhex('00000000')) 
+    else:#There is still space in this current block
+      while pointerTotal % 4 != 0:
+        Newmdl.write(bytes.fromhex('00000000')) 
+        pointerTotal+=1
+
+    newReturnOffset=0
+
+    boneList = []
+    bone_names = []   
+    bone_Hex_names = []
+    MDL_boneMatrixList = []     
+    bone_count = 0
+    for armature in [ob for ob in bpy.data.objects if ob.type == 'ARMATURE']:
+      
+      for bone in armature.data.bones:  
+        boneList.append(bone)         
+        bone_names.append(bone.name)
+        bone_count +=1
+        print(bone.name , " ,", bone_count)
+        charlength = len(bone.name)
+        #print(charlength)
+        encoded_bytes = bone.name.encode('utf-8')
+        hex_representation = encoded_bytes.hex()
+        nullSpacer = "\0"
+
+        while charlength <16:
+
+          hex_representation =  hex_representation +nullSpacer.encode('utf-8').hex()
+          charlength +=1
+        print(f"Hexadecimal string: {hex_representation}")
+        bone_Hex_names.append(hex_representation)
+        
+    
+    #Wrtie 2 for loops, one to process each main model then when doing the vertex data one for each submodel. The opauqe sub models must be done first then the transparent after.
+    print(submodelslistNames)
+    for i in range(mainModelCount): #For each main model
+      modelOffset = Newmdl.tell()
+      newOffsetList.append(modelOffset)
+      Newmdl.write(struct.pack('<h', bone_count)) #Bone count as int 16
+      shadowModel = False
+      hasTransparent = False
+      textureCount = 0
+      #find submodels belonging to this main one
+      for names in submodelslistNames:
+       if "_"+str(i) in names:
+         
+         #print(i)
+         if "_shadow" in names:
+          shadowModel = True
+          print("Shadow Model")
+         else:
+           if names[-1] != "t":
+            textureCount +=1 
+           else:
+             hasTransparent = True
+
+      if shadowModel == True:
+        Newmdl.write(bytes.fromhex('0101')) 
+      else:
+        Newmdl.write(bytes.fromhex('0103')) 
+      
+      Newmdl.write(struct.pack('<I', 48)) #Bone Table offset should always be 48
+      TransformTableOffsetOffset = Newmdl.tell() #The return location for the TransformTable offset. We will return to here and write it when we reach the transform table data
+      Newmdl.write(bytes.fromhex('00000000')) #Temp Transform Tabel offset
+      print("Texture Count of Model", i, ":",textureCount)
+      Newmdl.write(struct.pack('<I', textureCount))
+      TextureTableOffsetOffset = Newmdl.tell() #The return location for the TextureTable offset. We will return to here and write it when we reach the Texutre table data
+      Newmdl.write(bytes.fromhex('00000000')) #Temp Texture Tabel offset
+      VIFOppauqeOffsetOffset = Newmdl.tell() #The return location for the Vif data offset. We will return to here and write it when we reach the Vertex data
+      Newmdl.write(bytes.fromhex('00000000')) #Temp Vif offset
+      VIFTransparentOffsetOffset = Newmdl.tell() #The return location for the transparent Vif data offset. We will return to here and write it if there is any transparent vertecies. Otherwise it can stay as 0
+      Newmdl.write(bytes.fromhex('00000000')) #Temp Vif offset
+      BoneConstriantOffsetOffset = Newmdl.tell() #TThe return location for the BoneConstraint offset. We will return to here and write it when we reach the Bone data
+      Newmdl.write(bytes.fromhex('00000000')) #Temp Bone Constriant offset
+      Newmdl.write(bytes.fromhex('CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC')) #unknown bytes. Seems to be fine when set to CC B8A7F51AE4ABF51A3ABB680F7762001A CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      #BoneTable
+      currentbone = 0
+      
+      for boneHexNames in bone_Hex_names:
+        #print(boneHexNames)
+        Newmdl.write(bytes.fromhex(boneHexNames))
+        
+        #Write the parent index
+        if boneList[currentbone].parent:
+          #print(boneList[currentbone].parent.name)
+          parentIndex =0
+          while parentIndex < len(bone_names):
+            if bone_names[parentIndex] == boneList[currentbone].parent.name:
+              Newmdl.write(struct.pack('<h', parentIndex))
+            parentIndex +=1
+        else:
+          #print("No parent")
+          Newmdl.write(bytes.fromhex('FFFF'))
+        #write the current bone index
+        print(bone_names[currentbone])
+        Newmdl.write(struct.pack('<h', currentbone))
+        
+        #Calculate the mdl matrix for this bone and add it to the list
+        armature.rotation_euler = (0, 0, 0) #Blender rotation
+        if boneList[currentbone].parent:
+          
+          localMatrix = boneList[currentbone].matrix_local.copy()       
+          #print("Blender Local Matrix:", localMatrix)
+          #print("Local Matrix:", localMatrix)
+          x = np.linalg.solve(boneList[currentbone].parent.matrix_local,localMatrix).copy() 
+        else:
+          x = boneList[currentbone].matrix_local.copy() 
+        #x = np.round(x, 4)
+        
+        x.transpose()
+        x =  np.rot90(x,-1)
+        x = np.fliplr(x)
+        #print("MDL Matrix:", x)
+        MDL_boneMatrixList.append(x) 
+        currentbone +=1
+
+      while Newmdl.tell() % 16 != 0:#Spacer at end of bone names
+        Newmdl.write(bytes.fromhex('0000'))
+
+      #Transform table
+      
+      newReturnOffset = Newmdl.tell()
+      Newmdl.seek(TransformTableOffsetOffset)
+      Newmdl.write(struct.pack('<I', newReturnOffset-modelOffset))      
+      Newmdl.seek(newReturnOffset)
+      for mdlMatrix in MDL_boneMatrixList:
+        #print("Offset -------------", Newmdl.tell())
+        #print(mdlMatrix)
+        for row in mdlMatrix:
+          for value in row:
+            #print(value)
+            Newmdl.write(struct.pack('<f', value))
+        #Newmdl.write(bytes.fromhex('FFFF'))
+      
+      #Texture table
+      #Get texture name of each submodel in the main models. List of sumodels already exist
+      #write them as 32 byte stirngs
+      if shadowModel == False:
+        newReturnOffset = Newmdl.tell()
+        Newmdl.seek(TextureTableOffsetOffset)
+        Newmdl.write(struct.pack('<I', newReturnOffset-modelOffset))      
+        Newmdl.seek(newReturnOffset)
+        textureNameList = []
+        for submodels in submodelslist:
+          if "_"+str(i) in submodels.name:
+            print(submodels.name)
+            for slot in submodels.materials:          
+              print(f"--------------------------------------------------- {slot.name}")
+              if slot.name not in textureNameList:   
+                textureNameList.append(slot.name)
+        for textureName in textureNameList:
+          charlength = len(textureName)
+          #print(charlength)
+          encoded_bytes = textureName.encode('utf-8')
+          hex_representation = encoded_bytes.hex()
+          nullSpacer = "\0"
+
+          while charlength <32:
+
+            hex_representation =  hex_representation +nullSpacer.encode('utf-8').hex()
+            charlength +=1
+          print(f"Hexadecimal string: {hex_representation}")
+          Newmdl.write(bytes.fromhex(hex_representation))
+
+        #print(textureNameList)   
+        
+
+      #Vif Opaque/Vif Transparent --------------------------------------------------------------------------------------------------------------------
+      if shadowModel == True:
+        newReturnOffset = Newmdl.tell()
+        Newmdl.seek(TextureTableOffsetOffset)
+        Newmdl.write(struct.pack('<I', newReturnOffset-modelOffset))      
+        Newmdl.seek(newReturnOffset)
+      newReturnOffset = Newmdl.tell()
+      Newmdl.seek(VIFOppauqeOffsetOffset)
+      Newmdl.write(struct.pack('<I', newReturnOffset-modelOffset))      
+      Newmdl.seek(newReturnOffset)
+      
+      relevantSubmodelList = []
+      relevantSubmodeNameslList = []
+      for submodels in submodelslist:
+          if "_"+str(i) in submodels.name:
+            if '_t' not in submodels.name: 
+              relevantSubmodelList.append(submodels)
+              
+      for submodelNames in submodelslistNames:
+        if "_"+str(i) in submodelNames:
+            if '_t' not in submodelNames: 
+              relevantSubmodeNameslList.append(submodelNames)
+
+      for submodels in submodelslist:#Add transparent submodels to end of list
+          if "_"+str(i) in submodels.name:
+            if '_t' in submodels.name: 
+              relevantSubmodelList.append(submodels)
+
+      for submodelNames in submodelslistNames:#Add transparent submodels to end of list
+        if "_"+str(i) in submodelNames:
+            if '_t' in submodelNames: 
+              relevantSubmodeNameslList.append(submodelNames)
+
+      submodelslistloop = 0
+      for model in relevantSubmodelList:
+        submodelslistloop +=1
+        
+        
+        #Get vertex count
+        vertex_count = 0
+        subModelVertexList = []
+        for vertexies in model.vertices:
+          vertex_count +=1
+          subModelVertexList.append(vertexies)
+        #print(vertex_count)
+        if shadowModel == False:
+          UVList =[mathutils.Vector((0, 0))]*vertex_count  #To store the UVs without having to search 
+          print("UVLIST: ", len(UVList))
+
+
+
+        triangleList = []
+
+        
+        
+        normalvert = True
+        addedVertTriOffset =-1
+        largestVertOffset= -1
+        FlagaddedVertTriOffset =-1
+        FlaglargestVertOffset= -1
+        for fa, face in enumerate(model.polygons):
+              
+            triangleList.append(face.vertices[:])               
+            
+            #print("mesh[{fa}].SetTriangle {v_i};".format(fa=fa, v_i=triangleList[fa]))
+            for ver in face.vertices[:]:
+              
+              if ver == face.vertices[:][0]:
+                
+
+                if abs(ver - face.vertices[:][1]) >2 or abs(ver - face.vertices[:][2]) >2 or use_some_setting == True: #if vert 1 and 2 are within 2 range of 0 then its a normal vert and should be ordered lowest to heighest
+                  normalvert = False
+
+              if normalvert == True and ver >largestVertOffset:
+                largestVertOffset = ver +1
+                FlaglargestVertOffset = ver +1
+            
+              if addedVertTriOffset == -1  and normalvert == False: #As the for loop continues triangle list is getting larger, as soon as a non normal triangle is spotted addedVertTriOffset is set                  
+                  addedVertTriOffset = len(triangleList)-1
+                  FlagaddedVertTriOffset = len(triangleList)-1
+
+
+                  
+        
+                      
+
+        #for all the non normal verts, reorder them
+        print("AddedVertTriOffset (First edited triangle)", addedVertTriOffset)
+        print("LargestVertOffset (First edited vertex)",largestVertOffset)
+        #For every non normal triangle, order it into a new form of largestVertOffset+2 largestVertOffset+1 largestVertOffset, copying the vertecies data from 
+        #the original tri to the new tris and swap them, swaping the verts in the triangle list too
+        if shadowModel == False:
+          print("Generating Uv List...") 
+          vertLoopDict = {} #structure vertexID : loopID, lets uvs find the correct vert it needs. Need the blender loop the vertex is in.
+          for face in model.polygons:
+            for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
+              uv_coords = model.uv_layers.active.data[loop_idx].uv
+                    
+              UVList[vert_idx]= uv_coords 
+              vertLoopDict [vert_idx] = loop_idx
+
+        
+        vertex_Dict = {} #structure vertexID : [tri#, position in tri]
+        for index, tri in enumerate(triangleList):
+              for tri_index, tri_vert in enumerate(tri):   
+                vertex_Dict[tri_vert] = [index, tri_index] 
+
+        if addedVertTriOffset > -1 :
+          if largestVertOffset == -1:
+            largestVertOffset = 0
+          while addedVertTriOffset < len(triangleList):
+                original_tri = list(triangleList[addedVertTriOffset])              
+                #print("Original triangle",triangleList[addedVertTriOffset], "Tri ",addedVertTriOffset )
+                #Each original tri vert needs to be set after the search for the last one incase they are changed in the previous search 
+            
+                
+            
+                orgi_triVert1 = list(triangleList[addedVertTriOffset])[0]
+                replacementTri = vertex_Dict[largestVertOffset+2][0]
+                replacementTriVertIndex = vertex_Dict[largestVertOffset+2][1]
+                tri_vert = largestVertOffset+2
+                              
+                if tri_vert == largestVertOffset+2:
+
+                  originalLoop = -1
+                  foundLoop = -1
+                  orgi_uv_coordsX = -1
+                  orgi_uv_coordsY = -1
+                  if shadowModel == False:   
+                    originalLoop = vertLoopDict.get(orgi_triVert1)  
+                    foundLoop = vertLoopDict.get(tri_vert)     
+                  if originalLoop != foundLoop and shadowModel == False:                   
+                    orgi_uv_coordsX = model.uv_layers.active.data[originalLoop].uv.x
+                    orgi_uv_coordsY = model.uv_layers.active.data[originalLoop].uv.y
+                    found_uv_coords =model.uv_layers.active.data[foundLoop].uv
+                    model.uv_layers.active.data[originalLoop].uv = found_uv_coords                    
+                          
+                    model.uv_layers.active.data[foundLoop].uv.x = orgi_uv_coordsX
+                    model.uv_layers.active.data[foundLoop].uv.y = orgi_uv_coordsY 
+                    
+                    UVList[tri_vert] = model.uv_layers.active.data[foundLoop].uv
+                    
+                    
+                  
+                  if replacementTri ==  addedVertTriOffset: #already on same triangle 
+                    if replacementTriVertIndex == 0:
+                      print("Vert 0 already in correct tirangle and correct position")
+                    else:
+                      print("Vert 0 already in correct tirangle but incorrect position")  
+                      temp_triVert = list(triangleList[addedVertTriOffset])[0] 
+                      temp_listVert = subModelVertexList[temp_triVert]
+                      subModelVertexList[temp_triVert] = subModelVertexList[largestVertOffset+2] #copy the vertex data from found vertex to original
+                      subModelVertexList[largestVertOffset+2] = temp_listVert
+                      original_tri[0] = original_tri[replacementTriVertIndex]
+                      original_tri[replacementTriVertIndex] = temp_triVert
+                      
+
+                  else:#Not on the same triangle
+                    tempVert1 = subModelVertexList[orgi_triVert1] #Vertex data of original tri vert 1
+                    subModelVertexList[orgi_triVert1] = subModelVertexList[largestVertOffset+2] #copy the vertex data from found vertex to original
+                    subModelVertexList[largestVertOffset+2] = tempVert1 #copy the vertex data from original to found vertex
+                    temp_tri1 = list(triangleList[replacementTri]) #Triangle of found triangle
+                    temp_tri1[replacementTriVertIndex] = original_tri[0]#Copy the original vert int to where the repalcement was found 
+                    original_tri[0] = largestVertOffset+2 #Write the new vert to original tri
+                    new_tri1 = tuple(temp_tri1)
+                    triangleList[replacementTri] = new_tri1 #Overwrite the found tri with temp one
+
+                  #Swap the values in dictionary
+                  vertex_Dict[orgi_triVert1], vertex_Dict[largestVertOffset+2] = vertex_Dict[largestVertOffset+2], vertex_Dict[orgi_triVert1]
+
+                  new_new_tri = tuple(original_tri)
+                  triangleList[addedVertTriOffset] = new_new_tri 
+                #
+                orgi_triVert2 = list(triangleList[addedVertTriOffset])[1]
+                replacementTri = vertex_Dict[largestVertOffset+1][0]
+                replacementTriVertIndex = vertex_Dict[largestVertOffset+1][1]
+                tri_vert = largestVertOffset+1 
+                if tri_vert == largestVertOffset+1:
+                  originalLoop = -1
+                  foundLoop = -1
+                  orgi_uv_coordsX = -1
+                  orgi_uv_coordsY = -1
+                  if shadowModel == False:   
+                    originalLoop = vertLoopDict.get(orgi_triVert2)  
+                    foundLoop = vertLoopDict.get(tri_vert)   
+                  if originalLoop != foundLoop and shadowModel == False:                   
+                    orgi_uv_coordsX = model.uv_layers.active.data[originalLoop].uv.x
+                    orgi_uv_coordsY = model.uv_layers.active.data[originalLoop].uv.y
+                    found_uv_coords =model.uv_layers.active.data[foundLoop].uv
+                    model.uv_layers.active.data[originalLoop].uv = found_uv_coords                    
+                          
+                    model.uv_layers.active.data[foundLoop].uv.x = orgi_uv_coordsX
+                    model.uv_layers.active.data[foundLoop].uv.y = orgi_uv_coordsY 
+                    UVList[tri_vert] = model.uv_layers.active.data[foundLoop].uv
+                    
+                  if replacementTri ==  addedVertTriOffset: #already on same triangle 
+                    if replacementTriVertIndex == 1:
+                      print("Vert 1 already in correct tirangle and correct position")
+                    else:
+                      print("Vert 1 already in correct tirangle but incorrect position")  
+                      temp_triVert = list(triangleList[addedVertTriOffset])[1] 
+                      temp_listVert = subModelVertexList[temp_triVert]
+                      subModelVertexList[temp_triVert] = subModelVertexList[largestVertOffset+1] #copy the vertex data from found vertex to original
+                      subModelVertexList[largestVertOffset+1] = temp_listVert
+                      original_tri[1] = original_tri[replacementTriVertIndex]
+                      original_tri[replacementTriVertIndex] = temp_triVert
+                  else:
+                    tempVert2 = subModelVertexList[orgi_triVert2] #Vertex data of original tri vert 2
+                    subModelVertexList[orgi_triVert2] = subModelVertexList[largestVertOffset+1] #copy the vertex data from found vertex to original
+                    subModelVertexList[largestVertOffset+1] = tempVert2 #copy the vertex data from original to found vertex
+                    temp_tri2 = list(triangleList[replacementTri]) #Triangle of found triangle
+                    temp_tri2[replacementTriVertIndex] = original_tri[1]#Copy the original vert int to where the repalcement was found 
+                    original_tri[1] = largestVertOffset+1 #Write the new vert to original tri
+                    new_tri2 = tuple(temp_tri2)
+                    triangleList[replacementTri] = new_tri2 #Overwrite the found tri with temp one
+                  #Swap the values in dictionary
+                  vertex_Dict[orgi_triVert2], vertex_Dict[largestVertOffset+1] = vertex_Dict[largestVertOffset+1], vertex_Dict[orgi_triVert2]
+                  new_new_tri = tuple(original_tri)
+                  triangleList[addedVertTriOffset] = new_new_tri 
+                #
+                orgi_triVert3 = list(triangleList[addedVertTriOffset])[2]
+                replacementTri = vertex_Dict[largestVertOffset][0]
+                replacementTriVertIndex = vertex_Dict[largestVertOffset][1]
+                tri_vert = largestVertOffset
+                if tri_vert == largestVertOffset:
+                  originalLoop = -1
+                  foundLoop = -1
+                  orgi_uv_coordsX = -1
+                  orgi_uv_coordsY = -1
+                  if shadowModel == False:   
+                    originalLoop = vertLoopDict.get(orgi_triVert3)  
+                    foundLoop = vertLoopDict.get(tri_vert)   
+                  if originalLoop != foundLoop and shadowModel == False:                   
+                    orgi_uv_coordsX = model.uv_layers.active.data[originalLoop].uv.x
+                    orgi_uv_coordsY = model.uv_layers.active.data[originalLoop].uv.y
+                    found_uv_coords =model.uv_layers.active.data[foundLoop].uv
+                    model.uv_layers.active.data[originalLoop].uv = found_uv_coords                    
+                          
+                    model.uv_layers.active.data[foundLoop].uv.x = orgi_uv_coordsX
+                    model.uv_layers.active.data[foundLoop].uv.y = orgi_uv_coordsY 
+                    UVList[tri_vert] = model.uv_layers.active.data[foundLoop].uv
+                    
+                  if replacementTri ==  addedVertTriOffset: #already on same triangle 
+                    if replacementTriVertIndex == 2:
+                      print("Vert 2 already in correct tirangle and correct position")
+                    else:
+                      print("Vert 2 already in correct tirangle but incorrect position")  
+                      temp_triVert = list(triangleList[addedVertTriOffset])[2] 
+                      temp_listVert = subModelVertexList[temp_triVert]
+                      subModelVertexList[temp_triVert] = subModelVertexList[largestVertOffset] #copy the vertex data from found vertex to original
+                      subModelVertexList[largestVertOffset] = temp_listVert
+                      original_tri[2] = original_tri[replacementTriVertIndex]
+                      original_tri[replacementTriVertIndex] = temp_triVert
+                  else:
+                    tempVert3 = subModelVertexList[orgi_triVert3] #Vertex data of original tri vert 3
+                    subModelVertexList[orgi_triVert3] = subModelVertexList[largestVertOffset] #copy the vertex data from found vertex to original
+                    subModelVertexList[largestVertOffset] = tempVert3 #copy the vertex data from original to found vertex
+                    temp_tri3 = list(triangleList[replacementTri]) #Triangle of found triangle
+                    temp_tri3[replacementTriVertIndex] = original_tri[2]#Copy the original vert int to where the repalcement was found 
+                    original_tri[2] = largestVertOffset #Write the new vert to original tri
+                    new_tri3 = tuple(temp_tri3)
+                    triangleList[replacementTri] = new_tri3 #Overwrite the found tri with temp one
+                  #Swap the values in dictionary
+                  vertex_Dict[orgi_triVert3], vertex_Dict[largestVertOffset] = vertex_Dict[largestVertOffset], vertex_Dict[orgi_triVert3]
+                  new_new_tri = tuple(original_tri)
+                  triangleList[addedVertTriOffset] = new_new_tri 
+
+
+                largestVertOffset+=3
+                new_new_tri = tuple(original_tri)
+                triangleList[addedVertTriOffset] = new_new_tri
+                print(relevantSubmodeNameslList[submodelslistloop-1], "   New triangle",triangleList[addedVertTriOffset], "Tri ",addedVertTriOffset," /", len(triangleList) )
+                addedVertTriOffset+=1
+
+        print("Generating flag list for each vertex..." )
+        flagList =[] #To store the flags of a dmatag without having to search      
+        flagvert = 0
+        if(FlagaddedVertTriOffset == -1):
+          FlagaddedVertTriOffset = len(triangleList)
+          
+        while flagvert < FlaglargestVertOffset:  
+            if(flagvert%100 == 0 ):  
+              print(relevantSubmodeNameslList[submodelslistloop-1], "Vert Flag: ",  flagvert, " / ", vertex_count ) 
+
+            flag = -1
+            vertInNextTri = False
+            sawAFellowVert = False
+            #make triangle loop = to the tri# of a flagvert in vertDictionary vertex_Dict[flagvert][0]
+            triangleLoop = 0
+
+            
+            while triangleLoop < FlagaddedVertTriOffset:
+                  
+                  if triangleLoop+1 == FlagaddedVertTriOffset:                    
+                    if vertInNextTri == False: 
+                      if sawAFellowVert == True:               
+                        flag = -1
+                        
+                    if flagvert == vertex_count-1:
+                      flag = 32
+                  elif flagvert == triangleList[triangleLoop][0]:
+                    for nextTriVerts in triangleList[triangleLoop+1]:
+                      if flagvert == nextTriVerts:                                                 
+                          vertInNextTri = True
+
+                    if vertInNextTri == True:                                            
+                      flag = 0  
+                    else:                      
+                      for currenttris in triangleList[triangleLoop]:
+                        for nexttris in triangleList[triangleLoop+1]:
+                          if currenttris == nexttris:                            
+                            sawAFellowVert = True
+                      
+                      if sawAFellowVert == False:                        
+                        flag = 0 
+                  elif flagvert == triangleList[triangleLoop][1]: 
+                    for nextTriVerts in triangleList[triangleLoop+1]:
+                      if flagvert == nextTriVerts:                          
+                        vertInNextTri = True
+                    if vertInNextTri == True:
+                      flag = -1  
+                  
+                  elif flagvert == triangleList[triangleLoop][2]:
+                    for nextTriVerts in triangleList[triangleLoop+1]:
+                        if flagvert == nextTriVerts:                          
+                          vertInNextTri = True
+
+                    if vertInNextTri == True:
+                      flag = 32 
+                    else:                     
+                      
+                      for currenttris in triangleList[triangleLoop]:
+                        for nexttris in triangleList[triangleLoop+1]:
+                          if currenttris == nexttris:                            
+                            sawAFellowVert = True
+                      if sawAFellowVert == False:
+                        
+                        if triangleList[triangleLoop][2]< triangleList[triangleLoop][1]:
+                          if triangleList[triangleLoop][2]< triangleList[triangleLoop][0]:
+                            flag = -1
+                        else:
+                          flag = 32 
+                        
+                  
+                  
+                  triangleLoop +=1                  
+                  if vertInNextTri == True:
+                    triangleLoop = FlagaddedVertTriOffset
+            flagList.append(flag)
+            flagvert+=1
+
+        while flagvert < vertex_count:  
+            if(flagvert%100 == 0 ):  
+              print(relevantSubmodeNameslList[submodelslistloop-1], "Vert Flag: ",  flagvert, " / ", vertex_count ) 
+
+            flag = -1
+            vertInNextTri = False
+            sawAFellowVert = False
+            #make triangle loop = to the tri# of a flagvert in vertDictionary vertex_Dict[flagvert][0]
+            triangleLoop = vertex_Dict[flagvert][0]
+
+                
+            if triangleLoop+1 == len(triangleList):                    
+                    if vertInNextTri == False: 
+                      if sawAFellowVert == True:               
+                        flag = -1
+                        
+                    if flagvert == vertex_count-1:
+                      flag = 32
+            elif flagvert == triangleList[triangleLoop][0]:
+                    for nextTriVerts in triangleList[triangleLoop+1]:
+                      if flagvert == nextTriVerts:                                                 
+                          vertInNextTri = True
+
+                    if vertInNextTri == True:                                            
+                      flag = 0  
+                    else:                      
+                      for currenttris in triangleList[triangleLoop]:
+                        for nexttris in triangleList[triangleLoop+1]:
+                          if currenttris == nexttris:                            
+                            sawAFellowVert = True
+                      
+                      if sawAFellowVert == False:                        
+                        flag = 0 
+            elif flagvert == triangleList[triangleLoop][1]: 
+                    for nextTriVerts in triangleList[triangleLoop+1]:
+                      if flagvert == nextTriVerts:                          
+                        vertInNextTri = True
+                    if vertInNextTri == True:
+                      flag = -1  
+                  
+            elif flagvert == triangleList[triangleLoop][2]:
+                    for nextTriVerts in triangleList[triangleLoop+1]:
+                        if flagvert == nextTriVerts:                          
+                          vertInNextTri = True
+
+                    if vertInNextTri == True:
+                      flag = 32 
+                    else:                     
+                      
+                      for currenttris in triangleList[triangleLoop]:
+                        for nexttris in triangleList[triangleLoop+1]:
+                          if currenttris == nexttris:                            
+                            sawAFellowVert = True
+                      if sawAFellowVert == False:
+                        
+                        if triangleList[triangleLoop][2]< triangleList[triangleLoop][1]:
+                          if triangleList[triangleLoop][2]< triangleList[triangleLoop][0]:
+                            flag = -1
+                        else:
+                          flag = 32 
+                        
+                  
+                  
+                  
+            flagList.append(flag)
+            flagvert+=1
+            
+              
+          
+          
+          
+          
+              
+        
+
+        #Int vertecies processed = 0
+        vertecies_processed = 0
+        #bool lastVIF = false
+        lastVIF = False
+        #While vertecies processed < vertex count (Until all the vertecies in the model are processed)
+        print("Generating dmaTags (Groups of vertexies and their data)" )
+        maxsize = 0
+        if shadowModel:
+          maxsize = 49
+        else:
+          maxsize = 74
+        while vertecies_processed < vertex_count:
+          #int vertexset = 0
+          vertexset = 0        
+
+          if vertex_count - vertecies_processed > maxsize:
+            
+            vertexset = maxsize
+          #else
+          else:
+            #vertexset = vertexcount - vertecies processed  (If at the end of the list of vertecies to process)
+            vertexset = vertex_count - vertecies_processed
+            #if last submodel in submodel list
+            if submodelslistloop == len(relevantSubmodelList):
+                #lastVIF = true
+                lastVIF = True
+            #-----------------------------------------------------------------------------------------------------------------------------Check to see if next sub model is transparent 
+            if hasTransparent == True and submodelslistloop == len(relevantSubmodelList)-1: # If the last opaque submodel and there is a transparent one after.
+              #lastVIF = true
+              lastVIF = True
+          if lastVIF == False:
+            #Check here to see if the next dmatag will start with 2 -1 flags and if not add or subtract to vertexset as needed
+            if vertecies_processed+vertexset+1 < len(flagList):                
+                
+              if flagList[vertecies_processed+vertexset] == -1 and flagList[vertecies_processed+vertexset+1] == -1:                
+                  print("all good, ", vertecies_processed, "/ ", vertex_count," processed")                    
+              else:
+                while flagList[vertecies_processed+vertexset] != -1 and vertexset > 2 or flagList[vertecies_processed+vertexset+1] != -1 and vertexset > 2:
+                  vertexset-=1
+                if vertexset <= 2 and flagList[vertecies_processed+vertexset] != -1 or vertexset <= 0 and flagList[vertecies_processed+vertexset+1] != -1 :
+                  while flagList[vertecies_processed+vertexset] != -1  or flagList[vertecies_processed+vertexset+1] != -1 :
+                    vertexset+=1
+                print("fixed, new vertex count:", vertexset," ",  vertecies_processed, "/ ", vertex_count, "processed")  
+              
+              
+          
+                
+    
+          #Wrtie a DmaTag to new
+          #The first byte will be ((vertexset*48)/16) + 3 , then 00 00 10
+          if shadowModel:
+            DmaTagHead = int(((vertexset*32)/16) + 3)
+          else:
+            DmaTagHead = int(((vertexset*48)/16) + 3)
+          #print(DmaTagHead)
+          Newmdl.write(struct.pack('<B', DmaTagHead) +bytes.fromhex('000010'))
+
+          #Wrtie STCYCL and UNPACK commands(Skipped in blender)(Needed in game) [00 00 00 00 04 04 00 01 00 80 ?? ?? ?? 00 00 00] it seems the 3 ?? can be made 0 without issue to new C86CC8
+          Newmdl.write(bytes.fromhex('00000000040400010080'))
+          if shadowModel:
+            Newmdl.write(struct.pack('<B', (vertexset*2)+2))
+          else:
+            Newmdl.write(struct.pack('<B', (vertexset*3)+2))
+          Newmdl.write(bytes.fromhex('6C'))
+          if shadowModel:
+            Newmdl.write(struct.pack('<B', (vertexset*2)+2))
+          else:
+            Newmdl.write(struct.pack('<B', (vertexset*3)+2))
+          Newmdl.write(bytes.fromhex('000000'))
+
+          #Wrtie vertex table count as vertexset to new as int16
+          Newmdl.write(struct.pack('<h', vertexset))
+          #Write 01 00 to new mdl
+          Newmdl.write(bytes.fromhex('0100'))
+          #Write vertex count as vertexset to new as int 16
+          Newmdl.write(struct.pack('<h', vertexset))
+          # int unique value = Goto old mdl model off+ vif_opaque_offs + 16 to skip the unpack commands, + 6 to skip the begining of the vertex table to get to the unique value read as a int16
+          #Newmdl.write(struct.pack('<h', uniqueValue))E700
+          Newmdl.write(bytes.fromhex('6C00'))
+          #Write mode as 06 00 to new. Shadow modles use mode 16 (10 00) 
+          if shadowModel:
+            Newmdl.write(bytes.fromhex('1000'))
+          else:
+            Newmdl.write(bytes.fromhex('0600'))
+          #Write 00 9C XX 80 00 00 00 40 3E 30 12 04 00 00 00 00 00 00 to new where XX is vertexset as hex (struct.pack('<B', vertexset))
+          if shadowModel:
+            Newmdl.write(bytes.fromhex('009C')+ struct.pack('<B', vertexset) +bytes.fromhex('800000004026204100000000000000'))
+          else:
+            Newmdl.write(bytes.fromhex('009C')+ struct.pack('<B', vertexset) +bytes.fromhex('80000000403E301204000000000000'))
+          
+
+          #For i < vertexset (each vertex in table)
+          vert = 0
+          while vert < vertexset:
+            
+            #print("Vert:", vert + vertecies_processed, "Start offset:" , Newmdl.tell())
+            #Get face orientation of vertex
+            #Write flag to new to bytes 1 and 2. 
+            #Need to pull the vertex triangle data
+            
+            
+            #print("Vertex ", vert+vertecies_processed, "flag ", flagList[vert+vertecies_processed])
+            Newmdl.write(struct.pack('<h', flagList[vert+vertecies_processed]))
+            
+            #Write 00 00 to bytes 3 and 4
+            Newmdl.write(bytes.fromhex('0000'))
+            #Get vertex weight for current vertex bone group
+            #Write vertex weigh(should just be 1 so try just that first) to bytes 5-8 as a float
+            Newmdl.write(struct.pack('<f', 1))
+            
+            #Write 00 00 to bytes 9-12
+            Newmdl.write(bytes.fromhex('00000000'))
+            #For bytes 13 - 16 i am not sure what it is for, 0ing it dosent seem to change anything but the normal values seen are seen are 00200000 for normal vertex and 00A00000 for -1 flags
+            if flagList[vert+vertecies_processed] == -1:
+              Newmdl.write(bytes.fromhex('00A00000'))
+            else:
+              Newmdl.write(bytes.fromhex('00200000'))
+            
+            #For bytes 17-20 calculate the mdl x position from the bone matrix, using the bone name the vertex is attached to find a index in the bone name list and then
+            #it should be the same index in the oldmdl bone matracies list
+            #print(subModelVertexList[vert+vertecies_processed].groups)
+            
+            #print(relevantSubmodeNameslList)
+            ob = bpy.data.objects[relevantSubmodeNameslList[submodelslistloop-1]]
+            boneIndex = -1 #This will be the index to the parent bone in the mdl
+            groupName= ""
+            vertexToUse =mathutils.Vector((0, 0, 0))
+            vertexToUse = subModelVertexList[vertecies_processed+vert]
+            for ran in range(0, len(ob.vertex_groups)): #For every vertex group in the submodel model
+              group = ob.vertex_groups[ran]
+              for g in subModelVertexList[vertecies_processed+vert].groups:
+                if ran == g.group:                   
+                  groupName = group.name
+                  
+                  #print("Vert", vertecies_processed+vert, model.vertices[vertecies_processed+vert].co, "Group:" , group.name)
+            
+            v_mixed = mathutils.Vector((vertexToUse.co.x, vertexToUse.co.y,vertexToUse.co.z, 1))              
+            #print("updated vertex:", v_mixed)
+            for boneloop in range(0, len(bone_names)):
+              if groupName == bone_names[boneloop]:
+                boneIndex = boneloop
+                
+            #print("Matrix:", boneMatrix[boneIndex], "Bone:", boneIndex)
+            
+            x = np.dot(np.linalg.inv(boneList[boneIndex].matrix_local.copy()), v_mixed) 
+            #np.linalg.inv(A)  is simply the inverse of A, np.dot is the dot product
+
+            #print("Vert", vertecies_processed+vert,"Original?:",x)
+            
+            
+            Newmdl.write(struct.pack('<f', x[0]))
+            
+
+            #For bytes 21-24 calculate mdl y position
+            Newmdl.write(struct.pack('<f', x[1]))
+            #For bytes 25-28 calculate mdl z position
+            Newmdl.write(struct.pack('<f', x[2]))
+            
+            #For bytes 29-30 write the bone index *4
+            #print(boneIndex)
+            #print("Group name:", groupName)            
+              
+            #print("Bone index:", boneIndex)
+            Newmdl.write(struct.pack('<h', boneIndex*4))
+            #For bytes 31-32 write the bone index
+            Newmdl.write(struct.pack('<h', boneIndex))
+            
+            if shadowModel == False:
+              my_uv =UVList[vertecies_processed+vert] 
+                
+              UVx = my_uv.x
+              Newmdl.write(struct.pack('<f', UVx))
+              #For bytes 37-40 write UV y to new
+              UVy =1 - my_uv.y
+              Newmdl.write(struct.pack('<f', UVy))
+              #For bytes 41-44 write float 1
+              Newmdl.write(struct.pack('<f', 1))
+              #For bytes 45-46 write the texture index float to new    
+              textureindex = 1
+              currentSubmodelName = relevantSubmodeNameslList[submodelslistloop-1]   
+              if '_t' not in currentSubmodelName:        
+                textureindex = int(currentSubmodelName[-1])
+              else:
+                textureindex = int(currentSubmodelName[-3])
+              Newmdl.write(struct.pack('<H', textureindex))
+              #Bytes 47-48
+              Newmdl.write(bytes.fromhex('0000'))
+              #Temp empty vertex data
+              #Newmdl.write(bytes.fromhex('00000000000000000000000000000000'))
+              #Newmdl.write(bytes.fromhex(''))
+
+            vert +=1
+
+          #After writing all the vertecies in the table:
+          #Write 00 00 00 17 00 00 00 00 00 00 00 00 00 00 00 00 before next DMAtag
+          Newmdl.write(bytes.fromhex('00000017000000000000000000000000'))
+          vertecies_processed +=vertexset
+          #print("Vertecies processed:",vertecies_processed, " out of ", vertex_count  )
+          
+        #print(lastVIF)
+        #If lastVIF
+        if lastVIF:
+          #DmaTag = 1610612736
+          #write DMATag to new
+          Newmdl.write(struct.pack('<I',1610612736 ))
+          #write 12 bytes, 00 00 00 00 00 00 00 00 00 00 00 00 to new
+          Newmdl.write(bytes.fromhex('000000000000000000000000'))      
+
+        if hasTransparent == True and submodelslistloop == len(relevantSubmodelList)-1: # If the last opaque submodel and there is a transparent one after.
+          newReturnOffset = Newmdl.tell()
+          Newmdl.seek(VIFTransparentOffsetOffset)
+          Newmdl.write(struct.pack('<I', newReturnOffset-modelOffset))      
+          Newmdl.seek(newReturnOffset)
+      
+      #Bone constraints
+      newReturnOffset = Newmdl.tell()
+      Newmdl.seek(BoneConstriantOffsetOffset)
+      Newmdl.write(struct.pack('<I', newReturnOffset-modelOffset))      
+      Newmdl.seek(newReturnOffset)
+      constriantloop = 0
+      print("Writing bone constriants...") 
+      while constriantloop < bone_count:
+        Newmdl.write(bytes.fromhex('000097B7000097B7000097B7000097B7000097B7000097B7'))#454FDF3CD086533E1BA5B4BDBA44B03D5C7CD8BD2076D83D        
+        constriantloop +=1
+
+      if bone_count % 2 != 0:
+        Newmdl.write(bytes.fromhex('0000000000000000'))
+
+        
+
+    armature.rotation_euler = (math.pi / 2, 0, 0) #Blender rotation
+    print("Done")  
+    
+
+
+
+
+
+
+
+
+    #Go back to begining of new file and update model offsets with newOffsetlist
+    
+    Newmdl.seek(0)
+    for newOffsetCountLoop in range(0, len(newOffsetList)):
+      Newmdl.write(struct.pack('<I', newOffsetList[newOffsetCountLoop])) 
+
+  
+  
+
+    return {'FINISHED'}
+
+from . import readutil
+import binascii
+import struct
+import mathutils
+import math
+import numpy as np
+import bpy
 def write_mdl_data2(context, filepath, use_some_setting):
   
   #Step 1: Need to determine how many models are there, and which ones are shadow models
@@ -293,6 +1284,13 @@ def write_mdl_data2(context, filepath, use_some_setting):
     Bytes 47-48
 
     '''
+    '''
+    Shadow models only go to byte 32
+
+
+    '''
+
+
     #After the last vertex in a table add values 00 00 00 17 00 00 00 00 00 00 00 00 00 00 00 00 before next DMAtag
     # The data between the last DMATag 1610612736 and the new one is 12 bytes, 00 00 00 00 00 00 00 00 00 00 00 00. After will 60 if its the end of the model, or a new DMATAG for the transparent model
     #If its before a new model then everything from that point till the next model offset should be coppied
@@ -391,35 +1389,36 @@ def write_mdl_data2(context, filepath, use_some_setting):
         oldReturnOffset = Oldmdl.tell()
         bone_count = Oldmdl.read_uint16()
         Oldmdl.seek(oldReturnOffset)
-        Newmdl.write(struct.pack('<I', Oldmdl.read_uint32())) #Bone count
+        Newmdl.write(struct.pack('<I', Oldmdl.read_uint32())) #Bone count  #<-----------------------------------------------------------------------------------------------------------------------------------------------Update
         bone_table_offs = Oldmdl.read_uint32()
-        Newmdl.write(struct.pack('<I', bone_table_offs))
-        transform_table_offs = Oldmdl.read_uint32()
-        Newmdl.write(struct.pack('<I', transform_table_offs))
+        Newmdl.write(struct.pack('<I', bone_table_offs))  #<-----------------------------------------------------------------------------------------------------------------------------------------------Stay Same
+        transform_table_offs = Oldmdl.read_uint32() 
+        Newmdl.write(struct.pack('<I', transform_table_offs)) #<-----------------------------------------------------------------------------------------------------------------------------------------------Update
         
         #Copy the texture table count,texture table offset,and vif_opaque_offs from old to new, all uint 32. these offsets are just added to model offset and dont need to change
-        Newmdl.write(struct.pack('<I', Oldmdl.read_uint32()))
-        Newmdl.write(struct.pack('<I', Oldmdl.read_uint32()))
-        vif_opaque_offs = Oldmdl.read_uint32()
+        Newmdl.write(struct.pack('<I', Oldmdl.read_uint32()))#Texture table count  #<-----------------------------------------------------------------------------------------------------------------------------------------------Stay same
+        Newmdl.write(struct.pack('<I', Oldmdl.read_uint32()))#Texture table offest  #<-----------------------------------------------------------------------------------------------------------------------------------------------Update
+        vif_opaque_offs = Oldmdl.read_uint32()  #<-----------------------------------------------------------------------------------------------------------------------------------------------Update
         Newmdl.write(struct.pack('<I', vif_opaque_offs))
     
         #Set bool hastransparent to false
         hastransparent = False
         #Set int vif_translucent_offs_off to current offset in new
-        vif_translucent_offs_off = Newmdl.tell()
+        vif_translucent_offs_off = Newmdl.tell()  
 
         #If vif_translucent_offs in oldmdl is != 0 
         oldReturnOffset = Oldmdl.tell()
-        vif_translucent_offs = Oldmdl.read_uint32() 
+        vif_translucent_offs = Oldmdl.read_uint32() #<-----------------------------------------------------------------------------------------------------------------------------------------------Update
         Oldmdl.seek(oldReturnOffset)
         if vif_translucent_offs !=0:            
           # Set bool hastransparent to true
           hastransparent =True
     
         #Copy vif_translucent_offs from old to new for now, we have the bool saying if we need to update it later
-        Newmdl.write(struct.pack('<I', Oldmdl.read_uint32()))
+        Newmdl.write(struct.pack('<I', Oldmdl.read_uint32())) 
     
-        #Copy everything from here to model off+ vif_opaque_offs, the first VIF packet, from old to new
+        #Copy everything from here to model off+ vif_opaque_offs, the first VIF packet, from old to new  #<-----------------------------------------------------------------------------------------------------------------------------------------------Here is where we are going to make a change, change it to only copy to the start of bone table as we need to write a new bone table and transform table, after that
+        #And updating the needed offsets we can go to the first VIF packet model off+ vif_opaque_offs
         LoopOffset = Oldmdl.tell()
         #print("Before copy:", Newmdl.tell())
         #print("Model offset:", oldOffsetList[i])
@@ -437,7 +1436,7 @@ def write_mdl_data2(context, filepath, use_some_setting):
 
         
         
-        #Retreive a list of bone matracies from oldmdl (Since a model will use the same bones for all of it we only need the first copy). The matracies can be found at transform_table_offs
+        #Retreive a list of bone matracies from oldmdl (Since a model will use the same bones for all of it we only need the first copy)(Some models do NOT use all of the same bones). The matracies can be found at transform_table_offs
         boneMatrix = []
         oldReturnOffset = Oldmdl.tell()     
         
@@ -505,17 +1504,30 @@ def write_mdl_data2(context, filepath, use_some_setting):
           
           if obj.name[:-4] + '_mesh_data' +last_chars in bpy.data.meshes:
               
-              if "_"+str(i) in obj.name:             
-                bpy.ops.object.select_all(action='DESELECT')   
-                lastAddModelNameCorrection = len(submodelslistNames)-1
-                
-                bpy.data.objects[obj.name].select_set(True)  
-                bpy.data.objects[submodelslistNames[lastAddModelNameCorrection]].select_set(True)
-                bpy.context.view_layer.objects.active = bpy.data.objects[submodelslistNames[lastAddModelNameCorrection]]
-                bpy.ops.object.join()   
-                bpy.context.active_object.name = submodelslistNames[lastAddModelNameCorrection]
-                submodelslist[lastAddModelNameCorrection] = bpy.context.active_object.data
-                bpy.ops.object.select_all(action='DESELECT')
+              if "_"+str(i) in obj.name:   
+                if '_t' in obj.name:   
+                  bpy.ops.object.select_all(action='DESELECT')   
+                  lastAddModelNameCorrection = len(transModelNames)-1
+                  
+                  bpy.data.objects[obj.name].select_set(True)  
+                  bpy.data.objects[transModelNames[lastAddModelNameCorrection]].select_set(True)
+                  bpy.context.view_layer.objects.active = bpy.data.objects[transModelNames[lastAddModelNameCorrection]]
+                  bpy.ops.object.join()   
+                  bpy.context.active_object.name = transModelNames[lastAddModelNameCorrection]
+                  transModel[lastAddModelNameCorrection] = bpy.context.active_object.data
+                  bpy.ops.object.select_all(action='DESELECT')  
+
+                else:         
+                  bpy.ops.object.select_all(action='DESELECT')   
+                  lastAddModelNameCorrection = len(submodelslistNames)-1
+                  
+                  bpy.data.objects[obj.name].select_set(True)  
+                  bpy.data.objects[submodelslistNames[lastAddModelNameCorrection]].select_set(True)
+                  bpy.context.view_layer.objects.active = bpy.data.objects[submodelslistNames[lastAddModelNameCorrection]]
+                  bpy.ops.object.join()   
+                  bpy.context.active_object.name = submodelslistNames[lastAddModelNameCorrection]
+                  submodelslist[lastAddModelNameCorrection] = bpy.context.active_object.data
+                  bpy.ops.object.select_all(action='DESELECT')
               
               
                          
@@ -971,7 +1983,7 @@ def write_mdl_data2(context, filepath, use_some_setting):
             # int unique value = Goto old mdl model off+ vif_opaque_offs + 16 to skip the unpack commands, + 6 to skip the begining of the vertex table to get to the unique value read as a int16
             Newmdl.write(struct.pack('<h', uniqueValue))
 
-            #Write mode as 06 00 to new. Shadow modles use mode 16 but since they are getting copied as is we can assume mode 6 for custom models
+            #Write mode as 06 00 to new. Shadow modles use mode 16 (10 00) but since they are getting copied as is we can assume mode 6 for custom models
             Newmdl.write(bytes.fromhex('0600'))
             #Write 00 9C XX 80 00 00 00 40 3E 30 12 04 00 00 00 00 00 00 to new where XX is vertexset as hex (struct.pack('<B', vertexset))
             Newmdl.write(bytes.fromhex('009C')+ struct.pack('<B', vertexset) +bytes.fromhex('80000000403E301204000000000000'))
@@ -997,9 +2009,11 @@ def write_mdl_data2(context, filepath, use_some_setting):
              
               #Write 00 00 to bytes 9-12
               Newmdl.write(bytes.fromhex('00000000'))
-              #For bytes 13 - 16 i am not sure what it is for, 0ing it dosent seem to change anything but the normal values seen are seen are 00200000 for normal vertex and 00A00000 for -1 flags
-              
-              Newmdl.write(bytes.fromhex('00200000'))
+              #For bytes 13 - 16 i am not sure what it is for, 0ing it dosent seem to change anything but the normal values seen are seen are 00200000 for normal vertex and 00A00000 for -1 flags              
+              if flagList[vert+vertecies_processed] == -1:
+                  Newmdl.write(bytes.fromhex('00A00000'))
+              else:
+                  Newmdl.write(bytes.fromhex('00200000'))
               #For bytes 17-20 calculate the mdl x position from the bone matrix, using the bone name the vertex is attached to find a index in the bone name list and then
               #it should be the same index in the oldmdl bone matracies list
               #print(subModelVertexList[vert+vertecies_processed].groups)
@@ -1551,7 +2565,7 @@ def write_mdl_data2(context, filepath, use_some_setting):
                 #Write 00 00 to bytes 9-12
                 Newmdl.write(bytes.fromhex('00000000'))
                 #For bytes 13 - 16 i am not sure what it is for, 0ing it dosent seem to change anything but the normal values seen are seen are 00200000 for normal vertex and 00A00000 for -1 flags
-                if flag == -1:
+                if flagList[vert+vertecies_processed] == -1:
                   Newmdl.write(bytes.fromhex('00A00000'))
                 else:
                   Newmdl.write(bytes.fromhex('00200000'))
@@ -1720,6 +2734,8 @@ def write_mdl_data2(context, filepath, use_some_setting):
     return {'FINISHED'}
 
 
+
+
 class ExportKhReComMdl(Operator, ExportHelper):
     """Exports the object to become a RECOM MDL file"""
     bl_idname = "export_test.some_data"  # important since its how bpy.ops.import_test.some_data is constructed
@@ -1739,7 +2755,12 @@ class ExportKhReComMdl(Operator, ExportHelper):
     # to the class instance from the operator settings before calling.
     use_setting: BoolProperty(
         name="All Custom Fast export",
-        description="If the entire model is made up custom mesh and there is no original that is needed this will speed up the export.",
+        description="If the entire model is made up custom mesh that is split triangles and there is no original that is needed this will speed up the export.",
+        default=False,
+    ) # type: ignore
+    full_Custom: BoolProperty(
+        name="Fully custom MDL",
+        description="This will make a MDL file using ONLY the information in the blender scene. If submodels, bones, or materials are missing or missing or named incorectly then the exported MDL will reflect that. Allows for customizing every part of the MDL",
         default=False,
     ) # type: ignore
 
@@ -1754,7 +2775,10 @@ class ExportKhReComMdl(Operator, ExportHelper):
     ) # type: ignore
 
     def execute(self, context):
-        return write_mdl_data2(context, self.filepath, self.use_setting)
+        if self.full_Custom == True:
+          return write_mdl_data3(context, self.filepath, self.use_setting)
+        else:
+          return write_mdl_data2(context, self.filepath, self.use_setting)
 
 
 
