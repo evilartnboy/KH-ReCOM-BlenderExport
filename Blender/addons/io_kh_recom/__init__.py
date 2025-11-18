@@ -326,7 +326,6 @@ def write_mdl_data3(context, filepath, use_some_setting):
     mdl_basename = os.path.splitext(os.path.basename(filepath))[0]
     
     NEWfilepath = mdl_dirname + '\\'+ mdl_basename + 'NEW.mdl'
-    Oldmdl = readutil.BinaryFileReader(filepath)
     Newmdl = open(NEWfilepath, 'wb')
 
     #count the amount of main models in blender, denoted by the _0 first number in their name
@@ -990,11 +989,8 @@ def write_mdl_data3(context, filepath, use_some_setting):
         lastVIF = False
         #While vertecies processed < vertex count (Until all the vertecies in the model are processed)
         print("Generating dmaTags (Groups of vertexies and their data)" )
-        maxsize = 0
-        if shadowModel:
-          maxsize = 49
-        else:
-          maxsize = 74
+        maxsize = 33
+        
         while vertecies_processed < vertex_count:
           #int vertexset = 0
           vertexset = 0        
@@ -1936,10 +1932,10 @@ def write_mdl_data2(context, filepath, use_some_setting):
           while vertecies_processed < vertex_count:
             #int vertexset = 0
             vertexset = 0
-            #if vertexcount - vertecies processed > 74
-            if vertex_count - vertecies_processed > 74:
+            #if vertexcount - vertecies processed > 33
+            if vertex_count - vertecies_processed > 33:
               #vertexset = 74
-              vertexset = 74
+              vertexset = 33
             #else
             else:
               #vertexset = vertexcount - vertecies processed  (If at the end of the list of vertecies to process)
@@ -2492,10 +2488,10 @@ def write_mdl_data2(context, filepath, use_some_setting):
             while vertecies_processed < vertex_count:
               #int vertexset = 0
               vertexset = 0
-              #if vertexcount - vertecies processed > 74
-              if vertex_count - vertecies_processed > 74:
+              #if vertexcount - vertecies processed > 33
+              if vertex_count - vertecies_processed > 33:
                 #vertexset = 74
-                vertexset = 74
+                vertexset = 33
               #else
               else:
                 #vertexset = vertexcount - vertecies processed  (If at the end of the list of vertecies to process)
@@ -2761,6 +2757,11 @@ class ExportKhReComMdl(Operator, ExportHelper):
     full_Custom: BoolProperty(
         name="Fully custom MDL",
         description="This will make a MDL file using ONLY the information in the blender scene. If submodels, bones, or materials are missing or missing or named incorectly then the exported MDL will reflect that. Allows for customizing every part of the MDL",
+        default=False,
+    ) # type: ignore
+    PS2_Export: BoolProperty(
+        name="PS2 Export",
+        description="This will make a MDL file formated for the PS2 Release. Only works with Fully custom export option",
         default=False,
     ) # type: ignore
 
