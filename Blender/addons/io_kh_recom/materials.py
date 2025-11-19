@@ -31,7 +31,10 @@ class MaterialManager:
     material.use_nodes = True
 
     bsdf = material.node_tree.nodes['Principled BSDF']
-    bsdf.inputs['Specular'].default_value = 0
+    if bpy.app.version[0] < 4:
+        bsdf.inputs['Specular'].default_value = 0
+    else:
+        bsdf.inputs['IOR'].default_value = 0
 
     self._material_map[texture_name] = material, use_vertex_color
     return material
@@ -144,7 +147,10 @@ class MaterialManager:
                                    vcol_node.outputs['Alpha'])
 
       bsdf = material.node_tree.nodes['Principled BSDF']
-      bsdf.inputs['Specular'].default_value = 0
+      if bpy.app.version[0] < 4:
+        bsdf.inputs['Specular'].default_value = 0
+      else:
+        bsdf.inputs['IOR'].default_value = 0
       material.node_tree.links.new(bsdf.inputs['Base Color'],
                                    mult_node.outputs['Color'])
       material.node_tree.links.new(bsdf.inputs['Alpha'],
@@ -152,7 +158,10 @@ class MaterialManager:
 
     else:
       bsdf = material.node_tree.nodes['Principled BSDF']
-      bsdf.inputs['Specular'].default_value = 0
+      if bpy.app.version[0] < 4:
+        bsdf.inputs['Specular'].default_value = 0
+      else:
+        bsdf.inputs['IOR'].default_value = 0
       material.node_tree.links.new(bsdf.inputs['Base Color'],
                                    tex_node.outputs['Color'])
       material.node_tree.links.new(bsdf.inputs['Alpha'],
